@@ -8,7 +8,7 @@ use App\Http\Controllers\Guest\{
     DocumentDownloadController as GuestDownloadController,
     VerificationController,
     SignatureUploadController,
-    TrackingController // ✅ ADD: Import TrackingController
+    TrackingController 
 };
 use App\Http\Controllers\Internal\{
     DashboardController as InternalDashboardController,
@@ -41,7 +41,6 @@ Route::prefix('mahasiswa')->name('mahasiswa.')->group(function () {
     Route::post('/submit', [MahasiswaDocumentController::class, 'submit'])->name('submit');
     Route::get('/success/{id}', [MahasiswaDocumentController::class, 'success'])->name('success');
 
-    // ✅ FIXED: Tracking routes - Ganti ke TrackingController
     Route::get('/tracking', [TrackingController::class, 'index'])->name('tracking');
     Route::post('/tracking/check', [TrackingController::class, 'check'])->name('tracking.check');
     Route::get('/tracking/{code}', [TrackingController::class, 'show'])->name('tracking.detail');
