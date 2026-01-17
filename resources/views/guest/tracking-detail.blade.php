@@ -200,7 +200,6 @@
             @endif
         </div>
 
-        {{-- ✅ 3-Level Verification Progress --}}
         @if($documentRequest->current_verification_step > 0 || $documentRequest->verifications->count() > 0)
         <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
             <h3 class="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
@@ -217,7 +216,6 @@
         </div>
         @endif
 
-        {{-- ✅ FIXED: Signature Progress --}}
         @if($documentRequest->documentSignatures->count() > 0)
         <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
             <h3 class="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
@@ -259,7 +257,6 @@
                             @endif
                         </div>
 
-                        {{-- ✅ FIXED: Proper enum handling for status --}}
                         @php
                             $statusValue = is_object($signature->status) ? $signature->status->value : $signature->status;
                             $statusLabel = ucfirst($statusValue);

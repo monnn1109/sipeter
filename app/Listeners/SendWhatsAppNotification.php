@@ -22,7 +22,6 @@ use Exception;
 class SendWhatsAppNotification
 {
     protected WhatsAppService $whatsAppService;
-
     public function __construct(WhatsAppService $whatsAppService)
     {
         $this->whatsAppService = $whatsAppService;
@@ -112,8 +111,8 @@ class SendWhatsAppNotification
     public function handleDocumentRequestRejected(DocumentRequestRejected $event): void
     {
         try {
-            $this->whatsAppService->notifyDocumentRejected($event->documentRequest);
-
+            $reason = $event->documentRequest->rejection_reason ?? 'Tidak ada alasan yang diberikan.';
+            $this->whatsAppService->notifyDocumentRejected($event->documentRequest, $reason);
             $this->logNotification(
                 $event->documentRequest->applicant_phone,
                 'Document rejected notification',
@@ -124,7 +123,7 @@ class SendWhatsAppNotification
             Log::info('WhatsApp: Document rejected notification sent', [
                 'request_code' => $event->documentRequest->request_code,
                 'phone' => $event->documentRequest->applicant_phone,
-                'reason' => $event->documentRequest->rejection_reason
+                'reason' => $reason
             ]);
         } catch (Exception $e) {
             $this->logNotification(
@@ -202,7 +201,8 @@ class SendWhatsAppNotification
 
         if ($request->delivery_method === 'pickup') {
             try {
-                $this->whatsAppService->notifyDocumentReady($request);
+                // 🔥 FIXED: Call the correct method name
+                $this->whatsAppService->notifyDocumentReadyForPickup($request);
 
                 $this->logNotification(
                     $request->applicant_phone,

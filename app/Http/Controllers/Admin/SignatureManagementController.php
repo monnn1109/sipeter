@@ -5,13 +5,19 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\{DocumentSignature, DocumentRequest, SignatureAuthority};
 use App\Enums\{DocumentStatus, SignatureStatus};
-use App\Events\SignatureRequested;
+use App\Events\{SignatureRequested, SignatureVerified, SignatureRejected};
+use App\Services\{DocumentHistoryService, WhatsAppService};
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\{Auth, DB, Storage, Log};
 use Illuminate\Support\Str;
 
 class SignatureManagementController extends Controller
 {
+    public function __construct(
+        private DocumentHistoryService $historyService,
+        private WhatsAppService $whatsAppService
+    ) {}
+
     public function index(Request $request)
     {
         $stats = $this->getSignatureStats();
@@ -95,8 +101,7 @@ class SignatureManagementController extends Controller
             'documentRequest.documentType',
             'documentRequest.user',
             'signatureAuthority',
-            'verifiedBy',
-            'rejectedBy'
+            'verifiedBy'
         ])
         ->whereIn('status', [
             SignatureStatus::VERIFIED->value,
@@ -157,15 +162,6 @@ class SignatureManagementController extends Controller
         ));
     }
 
-    /**
-     * ✅ FIXED: Request TTD - Start from Level 1 ONLY if current_signature_step = 0
-     *
-     * Logic Flow:
-     * 1. Check all verifications completed (Level 1, 2, 3 approved)
-     * 2. Check current_signature_step
-     *    - If 0 → Request Level 1 (Pa Riko)
-     *    - If > 0 → Error (sudah ada request, handled by Service auto-trigger)
-     */
     public function requestSignature(Request $request, $documentId)
     {
         try {
@@ -184,7 +180,6 @@ class SignatureManagementController extends Controller
                 'current_signature_step' => $document->current_signature_step ?? 0,
             ]);
 
-            // ✅ CHECK 1: All verifications must be approved (Level 1, 2, 3)
             $allVerificationsApproved = $document->verifications()
                 ->whereIn('verification_level', [1, 2, 3])
                 ->where('decision', 'approved')
@@ -206,7 +201,6 @@ class SignatureManagementController extends Controller
                 return back()->with('error', '❌ Dokumen belum melewati semua verifikasi! Hanya Level ' . implode(', ', $approvedLevels) . ' yang sudah disetujui.');
             }
 
-            // ✅ CHECK 2: current_signature_step harus 0 (belum ada request TTD)
             $currentSignatureStep = $document->current_signature_step ?? 0;
 
             if ($currentSignatureStep > 0) {
@@ -219,7 +213,6 @@ class SignatureManagementController extends Controller
                 return back()->with('error', '⚠️ Request TTD sudah dimulai (Step ' . $currentSignatureStep . '). Proses otomatis akan lanjut setelah verifikasi.');
             }
 
-            // ✅ CHECK 3: Apakah sudah ada signature Level 1 yang active?
             $existingLevel1 = DocumentSignature::where('document_request_id', $document->id)
                 ->where('signature_level', 1)
                 ->whereIn('status', [SignatureStatus::REQUESTED, SignatureStatus::UPLOADED])
@@ -236,7 +229,6 @@ class SignatureManagementController extends Controller
                 return back()->with('error', '⚠️ Request TTD Level 1 sudah ada! Status: ' . $existingLevel1->status->label());
             }
 
-            // ✅ GET: Ketua Akademik (Level 1)
             $authority = SignatureAuthority::getActiveKetuaAkademik();
 
             if (!$authority || !$authority->is_active) {
@@ -254,7 +246,6 @@ class SignatureManagementController extends Controller
                 'level' => 1,
             ]);
 
-            // ✅ CREATE: Signature request Level 1
             $token = Str::random(64);
             $tokenExpiry = now()->addDays(7);
 
@@ -279,10 +270,9 @@ class SignatureManagementController extends Controller
                 'expires_at' => $tokenExpiry->toDateTimeString(),
             ]);
 
-            // ✅ UPDATE: Document status & current_signature_step
             $document->update([
                 'status' => DocumentStatus::SIGNATURE_REQUESTED,
-                'current_signature_step' => 1, // ✅ CRITICAL: Set to 1
+                'current_signature_step' => 1,
                 'signature_requested_at' => now()
             ]);
 
@@ -291,7 +281,6 @@ class SignatureManagementController extends Controller
                 'current_signature_step' => 1,
             ]);
 
-            // ✅ FIRE: Event untuk kirim WA ke Pa Riko
             $uploadLink = route('signature.upload.show', $token);
 
             event(new SignatureRequested($signature, $document, $authority, $uploadLink));
@@ -317,6 +306,225 @@ class SignatureManagementController extends Controller
             ]);
 
             return back()->with('error', '❌ Error: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * 🔥 NEW: Approve/Verify Signature
+     */
+    public function approve(Request $request, $id)
+    {
+        try {
+            DB::beginTransaction();
+
+            $signature = DocumentSignature::with([
+                'documentRequest',
+                'signatureAuthority'
+            ])->findOrFail($id);
+
+            if ($signature->status !== SignatureStatus::UPLOADED) {
+                DB::rollBack();
+                return back()->with('error', '❌ Signature belum diupload atau sudah diverifikasi!');
+            }
+
+            $oldStatus = $signature->status->value;
+
+            // Update signature
+            $signature->update([
+                'status' => SignatureStatus::VERIFIED,
+                'verified_at' => now(),
+                'verified_by' => Auth::id(),
+                'admin_notes' => $request->notes,
+            ]);
+
+            Log::info('Signature verified', [
+                'signature_id' => $signature->id,
+                'level' => $signature->signature_level,
+                'document_code' => $signature->documentRequest->request_code,
+                'verified_by' => Auth::user()->name,
+            ]);
+
+            // Check if all 3 signatures verified
+            $document = $signature->documentRequest;
+            $verifiedSignatures = $document->signatures()
+                ->whereIn('signature_level', [1, 2, 3])
+                ->where('status', SignatureStatus::VERIFIED)
+                ->get();
+
+            $allVerified = $verifiedSignatures->count() === 3;
+
+            if ($allVerified) {
+                // 🔥 ALL SIGNATURES VERIFIED
+                $document->update([
+                    'status' => DocumentStatus::SIGNATURE_VERIFIED,
+                    'current_signature_step' => 3,
+                    'signature_completed_at' => now(),
+                ]);
+
+                $this->historyService->logStatusChange(
+                    $document,
+                    $document->status->value,
+                    DocumentStatus::SIGNATURE_VERIFIED->value,
+                    'Semua TTD (3 Level) telah diverifikasi. Siap untuk upload dokumen final.'
+                );
+
+                Log::info('ALL SIGNATURES VERIFIED', [
+                    'document_id' => $document->id,
+                    'document_code' => $document->request_code,
+                ]);
+
+                $successMessage = '🎉 TTD Level ' . $signature->signature_level . ' VERIFIED! SEMUA TTD SELESAI! Silakan upload dokumen final.';
+            } else {
+                // Auto request next level
+                $nextLevel = $signature->signature_level + 1;
+                if ($nextLevel <= 3) {
+                    $this->autoRequestNextLevelSignature($document, $nextLevel);
+                }
+
+                $successMessage = '✅ TTD Level ' . $signature->signature_level . ' berhasil diverifikasi!';
+            }
+
+            // Send WhatsApp notification
+            $this->whatsAppService->notifySignatureVerified($document, $signature->signatureAuthority);
+
+            // Fire event
+            event(new SignatureVerified($signature, $document, $signature->signatureAuthority));
+
+            DB::commit();
+
+            return back()->with('success', $successMessage);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Signature verification failed', [
+                'signature_id' => $id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            return back()->with('error', '❌ Gagal memverifikasi: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * 🔥 NEW: Reject Signature
+     */
+    public function reject(Request $request, $id)
+    {
+        $request->validate([
+            'reason' => 'required|string|max:500',
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $signature = DocumentSignature::with([
+                'documentRequest',
+                'signatureAuthority'
+            ])->findOrFail($id);
+
+            if ($signature->status !== SignatureStatus::UPLOADED) {
+                DB::rollBack();
+                return back()->with('error', '❌ Signature belum diupload atau sudah diverifikasi!');
+            }
+
+            $signature->update([
+                'status' => SignatureStatus::REJECTED,
+                'rejected_at' => now(),
+                'rejected_by' => Auth::id(),
+                'rejection_reason' => $request->reason,
+            ]);
+
+            Log::info('Signature rejected', [
+                'signature_id' => $signature->id,
+                'level' => $signature->signature_level,
+                'reason' => $request->reason,
+            ]);
+
+            // Fire event
+            event(new SignatureRejected($signature, $signature->documentRequest, $signature->signatureAuthority, $request->reason));
+
+            DB::commit();
+
+            return back()->with('success', '❌ TTD Level ' . $signature->signature_level . ' ditolak. Pejabat akan diminta upload ulang.');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Signature rejection failed', [
+                'signature_id' => $id,
+                'error' => $e->getMessage(),
+            ]);
+            return back()->with('error', '❌ Gagal menolak: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * 🔥 HELPER: Auto request next signature level
+     */
+    private function autoRequestNextLevelSignature(DocumentRequest $document, int $nextLevel)
+    {
+        try {
+            $existingSignature = DocumentSignature::where('document_request_id', $document->id)
+                ->where('signature_level', $nextLevel)
+                ->first();
+
+            if ($existingSignature) {
+                Log::info('Signature already exists for next level', [
+                    'document_id' => $document->id,
+                    'next_level' => $nextLevel,
+                ]);
+                return;
+            }
+
+            $authority = match($nextLevel) {
+                2 => SignatureAuthority::getActiveWakilKetua3(),
+                3 => SignatureAuthority::getActiveKetua(),
+                default => null,
+            };
+
+            if (!$authority) {
+                Log::warning('Authority not found for next level', [
+                    'next_level' => $nextLevel,
+                ]);
+                return;
+            }
+
+            $token = Str::random(64);
+            $tokenExpiry = now()->addDays(7);
+
+            $signature = DocumentSignature::create([
+                'document_request_id' => $document->id,
+                'signature_authority_id' => $authority->id,
+                'signature_level' => $nextLevel,
+                'status' => SignatureStatus::REQUESTED,
+                'requested_at' => now(),
+                'metadata' => [
+                    'token' => $token,
+                    'token_expires_at' => $tokenExpiry->toDateTimeString(),
+                    'requested_by' => Auth::id(),
+                    'auto_requested' => true,
+                ]
+            ]);
+
+            $document->update([
+                'current_signature_step' => $nextLevel,
+            ]);
+
+            $uploadLink = route('signature.upload.show', $token);
+
+            event(new SignatureRequested($signature, $document, $authority, $uploadLink));
+
+            Log::info('Auto-requested signature for next level', [
+                'document_id' => $document->id,
+                'next_level' => $nextLevel,
+                'authority' => $authority->name,
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to auto-request next level', [
+                'document_id' => $document->id,
+                'next_level' => $nextLevel,
+                'error' => $e->getMessage(),
+            ]);
         }
     }
 

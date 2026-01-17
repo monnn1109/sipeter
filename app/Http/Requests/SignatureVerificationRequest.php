@@ -6,19 +6,12 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class SignatureVerificationRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     */
+
     public function authorize(): bool
     {
-        return true; // Authorization handled in controller/middleware
+        return true;
     }
 
-    /**
-     * Get the validation rules that apply to the request.
-     *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
-     */
     public function rules(): array
     {
         $action = $this->input('action', 'verify');
@@ -35,7 +28,6 @@ class SignatureVerificationRequest extends FormRequest
             ],
         ];
 
-        // Add conditional rules based on action
         if ($action === 'verify') {
             $rules['verification_notes'] = [
                 'nullable',
@@ -56,11 +48,6 @@ class SignatureVerificationRequest extends FormRequest
         return $rules;
     }
 
-    /**
-     * Get custom attribute names for validator errors.
-     *
-     * @return array<string, string>
-     */
     public function attributes(): array
     {
         return [
@@ -70,12 +57,6 @@ class SignatureVerificationRequest extends FormRequest
             'rejection_reason' => 'alasan penolakan',
         ];
     }
-
-    /**
-     * Get custom validation messages.
-     *
-     * @return array<string, string>
-     */
     public function messages(): array
     {
         return [
@@ -93,12 +74,8 @@ class SignatureVerificationRequest extends FormRequest
         ];
     }
 
-    /**
-     * Prepare data for validation
-     */
     protected function prepareForValidation(): void
     {
-        // Clean up any extra spaces
         if ($this->has('verification_notes')) {
             $this->merge([
                 'verification_notes' => trim($this->verification_notes),
@@ -111,7 +88,6 @@ class SignatureVerificationRequest extends FormRequest
             ]);
         }
 
-        // Ensure action is lowercase
         if ($this->has('action')) {
             $this->merge([
                 'action' => strtolower($this->action),

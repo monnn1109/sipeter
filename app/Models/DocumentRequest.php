@@ -306,12 +306,8 @@ class DocumentRequest extends Model
         return $verification?->verified_at?->format('d/m/Y H:i');
     }
 
-    // ==================== ✅ NEW: SIGNATURE PROGRESS METHODS ====================
+    // ==================== SIGNATURE PROGRESS METHODS ====================
 
-    /**
-     * ✅ NEW: Get 3-level signature progress (similar to verification)
-     * Returns: current_step, percentage, levels detail, is_completed
-     */
     public function getSignatureProgress(): array
     {
         $currentStep = $this->current_signature_step ?? 0;
@@ -353,9 +349,6 @@ class DocumentRequest extends Model
         ];
     }
 
-    /**
-     * ✅ NEW: Get signature status for specific level
-     */
     private function getSignatureLevelStatus(int $level): string
     {
         $signature = $this->signatures()
@@ -369,9 +362,6 @@ class DocumentRequest extends Model
         return $signature->status->value;
     }
 
-    /**
-     * ✅ NEW: Get authority for signature level
-     */
     private function getSignatureLevelAuthority(int $level): ?SignatureAuthority
     {
         $signature = $this->signatures()
@@ -381,9 +371,6 @@ class DocumentRequest extends Model
         return $signature?->signatureAuthority;
     }
 
-    /**
-     * ✅ NEW: Get upload date for signature level
-     */
     private function getSignatureLevelUploadDate(int $level): ?string
     {
         $signature = $this->signatures()
@@ -394,9 +381,6 @@ class DocumentRequest extends Model
         return $signature?->uploaded_at?->format('d/m/Y H:i');
     }
 
-    /**
-     * ✅ NEW: Get verified date for signature level
-     */
     private function getSignatureLevelVerifiedDate(int $level): ?string
     {
         $signature = $this->signatures()
@@ -405,30 +389,6 @@ class DocumentRequest extends Model
             ->first();
 
         return $signature?->verified_at?->format('d/m/Y H:i');
-    }
-
-    // ==================== APPLICANT METHODS ====================
-
-    public function isGuestRequest(): bool
-    {
-        return $this->applicant_type->value === 'mahasiswa';
-    }
-
-    public function isInternalRequest(): bool
-    {
-        return in_array($this->applicant_type->value, ['dosen', 'staff']);
-    }
-
-    public function getApplicantNameWithType(): string
-    {
-        $type = match($this->applicant_type->value) {
-            'mahasiswa' => 'Mahasiswa',
-            'dosen' => 'Dosen',
-            'staff' => 'Staff',
-            default => ''
-        };
-
-        return "{$this->applicant_name} ({$type})";
     }
 
     // ==================== DELIVERY METHODS ====================
@@ -517,59 +477,6 @@ class DocumentRequest extends Model
             && in_array($this->status->value, ['approved', 'processing', 'signature_completed']);
     }
 
-    public function isDownloaded(): bool
-    {
-        return $this->activities()
-            ->where('activity_type', 'downloaded')
-            ->exists();
-    }
-
-    public function getDownloadedAt()
-    {
-        $activity = $this->activities()
-            ->where('activity_type', 'downloaded')
-            ->latest()
-            ->first();
-
-        return $activity ? $activity->created_at : null;
-    }
-
-    public function getDownloadCount(): int
-    {
-        return $this->activities()
-            ->where('activity_type', 'downloaded')
-            ->count();
-    }
-
-    // ==================== VERIFICATION STATUS METHODS ====================
-
-    public function needsVerification(): bool
-    {
-        return $this->status->value === 'approved'
-            && $this->getCurrentVerificationLevel() === 0;
-    }
-
-    public function isVerified(): bool
-    {
-        return $this->isAllVerificationCompleted();
-    }
-
-    public function isVerificationRejected(): bool
-    {
-        return $this->status === DocumentStatus::VERIFICATION_REJECTED;
-    }
-
-    public function canBeVerified(): bool
-    {
-        return $this->status->value === 'approved'
-            && $this->getCurrentVerificationLevel() === 0;
-    }
-
-    public function hasVerificationAuthority(): bool
-    {
-        return !empty($this->verification_authority_id);
-    }
-
     // ==================== SIGNATURE METHODS ====================
 
     public function requiresSignature(): bool
@@ -588,9 +495,6 @@ class DocumentRequest extends Model
         return $this->signatures()->exists();
     }
 
-    /**
-     * ✅ UPDATED: Improve to check 3 levels explicitly
-     */
     public function areAllSignaturesVerified(): bool
     {
         $verifiedCount = $this->signatures()
@@ -615,21 +519,6 @@ class DocumentRequest extends Model
         return round(($this->signatures_completed / $this->signatures_required) * 100, 2);
     }
 
-    public function isWaitingForSignature(): bool
-    {
-        return $this->signature_status === 'waiting';
-    }
-
-    public function isSignatureInProgress(): bool
-    {
-        return $this->signature_status === 'in_progress';
-    }
-
-    public function isSignatureCompleted(): bool
-    {
-        return $this->signature_status === 'completed';
-    }
-
     public function canBeSigned(): bool
     {
         return $this->requiresSignature()
@@ -637,27 +526,129 @@ class DocumentRequest extends Model
             && !$this->areAllSignaturesVerified();
     }
 
-    // ==================== MARKED AS TAKEN METHODS ====================
+    // ==================== 🔥 NEW: ACTION STATUS HELPERS ====================
 
-    public function isMarkedAsTaken(): bool
+    /**
+     * 🔥 NEW: Cek apakah dokumen bisa upload final (semua TTD verified)
+     */
+    public function canUploadFinalDocument(): bool
     {
-        return $this->is_marked_as_taken === true;
+        return $this->areAllSignaturesVerified()
+            && !$this->hasFile();
     }
 
+    /**
+     * 🔥 NEW: Cek apakah dokumen pickup fisik bisa ditandai "Siap Diambil"
+     */
+    public function canBeMarkedAsReadyForPickup(): bool
+    {
+        return $this->delivery_method->value === 'pickup'
+            && $this->hasFile()
+            && !in_array($this->status->value, ['ready_for_pickup', 'picked_up', 'completed']);
+    }
+
+    /**
+     * 🔥 NEW: Cek apakah dokumen pickup fisik bisa ditandai "Sudah Diambil"
+     */
+    public function canBeMarkedAsPickedUp(): bool
+    {
+        return $this->delivery_method->value === 'pickup'
+            && $this->status->value === 'ready_for_pickup'
+            && $this->hasFile();
+    }
+
+    /**
+     * 🔥 NEW: Cek apakah dokumen download online bisa ditandai "Sudah Didownload" (oleh user)
+     */
     public function canBeMarkedAsTaken(): bool
     {
-        return in_array($this->status->value, ['ready_for_pickup', 'picked_up'])
+        return $this->delivery_method->value === 'download'
+            && in_array($this->status->value, ['ready_for_pickup', 'picked_up'])
             && !$this->is_marked_as_taken;
     }
 
-    public function wasMarkedByAdmin(): bool
+    /**
+     * Get action yang harus dilakukan admin (untuk UI Tindakan)
+     */
+    public function getNextAction(): string
     {
-        return $this->marked_by_role === 'admin';
+        // Semua TTD verified, tapi belum upload final
+        if ($this->areAllSignaturesVerified() && !$this->hasFile()) {
+            return 'upload_final_document';
+        }
+
+        // Pickup fisik, dokumen sudah upload, belum siap diambil
+        if ($this->delivery_method->value === 'pickup'
+            && $this->hasFile()
+            && !in_array($this->status->value, ['ready_for_pickup', 'picked_up', 'completed'])) {
+            return 'mark_ready_for_pickup';
+        }
+
+        // Pickup fisik, dokumen sudah siap diambil
+        if ($this->delivery_method->value === 'pickup'
+            && $this->status->value === 'ready_for_pickup'
+            && $this->hasFile()) {
+            return 'mark_as_picked_up';
+        }
+
+        // Download online, dokumen sudah upload & auto ready
+        if ($this->delivery_method->value === 'download'
+            && $this->status->value === 'ready_for_pickup'
+            && $this->hasFile()) {
+            return 'ready_for_download';
+        }
+
+        // Default: masih proses TTD
+        if (!$this->areAllSignaturesVerified()) {
+            return 'waiting_for_signatures';
+        }
+
+        // Sudah selesai
+        if ($this->status->value === 'completed') {
+            return 'completed';
+        }
+
+        return 'unknown';
     }
 
-    public function wasMarkedByUser(): bool
+    /**
+     * Get label tindakan untuk UI
+     */
+    public function getActionLabel(): string
     {
-        return $this->marked_by_role === 'user';
+        return match($this->getNextAction()) {
+            'upload_final_document' => 'Menunggu Upload Dokumen Final',
+            'mark_ready_for_pickup' => 'Menunggu Tandai Siap Diambil',
+            'mark_as_picked_up' => 'Menunggu Pengambilan Fisik',
+            'ready_for_download' => 'Dokumen Siap Download',
+            'waiting_for_signatures' => 'Proses Tanda Tangan Digital',
+            'completed' => 'Selesai',
+            default => 'Status Tidak Diketahui',
+        };
+    }
+
+    // ==================== APPLICANT METHODS ====================
+
+    public function isGuestRequest(): bool
+    {
+        return $this->applicant_type->value === 'mahasiswa';
+    }
+
+    public function isInternalRequest(): bool
+    {
+        return in_array($this->applicant_type->value, ['dosen', 'staff']);
+    }
+
+    public function getApplicantNameWithType(): string
+    {
+        $type = match($this->applicant_type->value) {
+            'mahasiswa' => 'Mahasiswa',
+            'dosen' => 'Dosen',
+            'staff' => 'Staff',
+            default => ''
+        };
+
+        return "{$this->applicant_name} ({$type})";
     }
 
     // ==================== STATUS CHECK METHODS ====================
@@ -690,6 +681,48 @@ class DocumentRequest extends Model
     public function isRejected(): bool
     {
         return $this->status->value === 'rejected';
+    }
+
+    public function isVerified(): bool
+    {
+        return $this->isAllVerificationCompleted();
+    }
+
+    public function isVerificationRejected(): bool
+    {
+        return $this->status === DocumentStatus::VERIFICATION_REJECTED;
+    }
+
+    public function canBeVerified(): bool
+    {
+        return $this->status->value === 'approved'
+            && $this->getCurrentVerificationLevel() === 0;
+    }
+
+    public function hasVerificationAuthority(): bool
+    {
+        return !empty($this->verification_authority_id);
+    }
+
+    public function needsVerification(): bool
+    {
+        return $this->status->value === 'approved'
+            && $this->getCurrentVerificationLevel() === 0;
+    }
+
+    public function isMarkedAsTaken(): bool
+    {
+        return $this->is_marked_as_taken === true;
+    }
+
+    public function wasMarkedByAdmin(): bool
+    {
+        return $this->marked_by_role === 'admin';
+    }
+
+    public function wasMarkedByUser(): bool
+    {
+        return $this->marked_by_role === 'user';
     }
 
     // ==================== SCOPES ====================
@@ -734,61 +767,11 @@ class DocumentRequest extends Model
         return $query->where('status', 'rejected');
     }
 
-    public function scopeSubmitted($query)
-    {
-        return $query->where('status', 'submitted');
-    }
-
-    public function scopeProcessing($query)
-    {
-        return $query->where('status', 'processing');
-    }
-
-    public function scopePickedUp($query)
-    {
-        return $query->where('status', 'picked_up');
-    }
-
-    public function scopeWithFiles($query)
-    {
-        return $query->whereNotNull('file_path');
-    }
-
-    public function scopeWithoutFiles($query)
-    {
-        return $query->whereNull('file_path');
-    }
-
     public function scopeDownloadable($query)
     {
         return $query->where('delivery_method', 'download')
             ->whereNotNull('file_path')
             ->whereIn('status', ['ready_for_pickup', 'picked_up', 'completed']);
-    }
-
-    public function scopeToday($query)
-    {
-        return $query->whereDate('created_at', today());
-    }
-
-    public function scopeThisWeek($query)
-    {
-        return $query->whereBetween('created_at', [
-            now()->startOfWeek(),
-            now()->endOfWeek()
-        ]);
-    }
-
-    public function scopeThisMonth($query)
-    {
-        return $query->whereMonth('created_at', now()->month)
-            ->whereYear('created_at', now()->year);
-    }
-
-    public function scopeNeedsVerification($query)
-    {
-        return $query->where('status', 'approved')
-            ->where('current_verification_step', 0);
     }
 
     public function scopeVerificationStep($query, int $step)
@@ -804,55 +787,5 @@ class DocumentRequest extends Model
                 'verification_step_2_requested',
                 'verification_step_3_requested',
             ]);
-    }
-
-    public function scopeVerificationRequested($query)
-    {
-        return $query->whereIn('status', [
-            'verification_step_1_requested',
-            'verification_step_2_requested',
-            'verification_step_3_requested',
-        ]);
-    }
-
-    public function scopeVerificationApproved($query)
-    {
-        return $query->where('status', 'verification_step_3_approved')
-            ->where('current_verification_step', 3);
-    }
-
-    public function scopeVerificationRejected($query)
-    {
-        return $query->where('status', 'verification_rejected');
-    }
-
-    public function scopeRequiringSignature($query)
-    {
-        return $query->where('requires_signature', true);
-    }
-
-    public function scopeWaitingSignature($query)
-    {
-        return $query->where('status', 'waiting_signature');
-    }
-
-    public function scopeSignatureInProgress($query)
-    {
-        return $query->where('status', 'signature_in_progress');
-    }
-
-    public function scopeSignatureCompleted($query)
-    {
-        return $query->where('status', 'signature_completed');
-    }
-
-    public function scopeMarkedAsTaken($query)
-    {
-        return $query->where('is_marked_as_taken', true);
-    }
-
-    public function scopeNotMarkedAsTaken($query)
-    {
-        return $query->where('is_marked_as_taken', false);
     }
 }

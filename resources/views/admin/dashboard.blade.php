@@ -182,28 +182,59 @@
         @if($recentDocuments && $recentDocuments->count() > 0)
             <div class="divide-y divide-gray-100">
                 @foreach($recentDocuments as $doc)
-                    <a href="{{ route('admin.documents.show', $doc->id) }}" class="block p-5 hover:bg-gray-50 transition-colors">
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center gap-4 flex-1">
-                                <div class="w-12 h-12 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-lg flex items-center justify-center text-white font-bold text-sm shadow-sm">
-                                    {{ strtoupper(substr($doc->documentType->name ?? 'DOC', 0, 2)) }}
+                    @php
+                        // 🔥 FIX: Check if document has valid status
+                        $hasValidStatus = false;
+                        $docStatus = null;
+
+                        try {
+                            if ($doc && isset($doc->status)) {
+                                // Try to access status - will throw ValueError if invalid
+                                $docStatus = $doc->status;
+                                $hasValidStatus = true;
+                            }
+                        } catch (\ValueError $e) {
+                            // Invalid status - log and skip showing badge
+                            \Log::warning('Invalid document status in dashboard', [
+                                'document_id' => $doc->id,
+                                'request_code' => $doc->request_code,
+                                'status_raw' => $doc->getRawOriginal('status') ?? 'NULL'
+                            ]);
+                            $hasValidStatus = false;
+                        }
+                    @endphp
+
+                    @if($hasValidStatus)
+                        <a href="{{ route('admin.documents.show', $doc->id) }}" class="block p-5 hover:bg-gray-50 transition-colors">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-4 flex-1">
+                                    <div class="w-12 h-12 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-lg flex items-center justify-center text-white font-bold text-sm shadow-sm">
+                                        {{ strtoupper(substr($doc->documentType->name ?? 'DOC', 0, 2)) }}
+                                    </div>
+                                    <div class="flex-1">
+                                        <h4 class="font-bold text-gray-900 mb-0.5">{{ $doc->request_code }}</h4>
+                                        <p class="text-sm text-gray-600">{{ $doc->applicant_name }} - {{ $doc->documentType->name ?? 'Dokumen' }}</p>
+                                        <p class="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                                            <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/>
+                                            </svg>
+                                            {{ $doc->created_at->diffForHumans() }}
+                                        </p>
+                                    </div>
                                 </div>
-                                <div class="flex-1">
-                                    <h4 class="font-bold text-gray-900 mb-0.5">{{ $doc->request_code }}</h4>
-                                    <p class="text-sm text-gray-600">{{ $doc->applicant_name }} - {{ $doc->documentType->name ?? 'Dokumen' }}</p>
-                                    <p class="text-xs text-gray-500 mt-1 flex items-center gap-1">
-                                        <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
-                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/>
-                                        </svg>
-                                        {{ $doc->created_at->diffForHumans() }}
-                                    </p>
+                                <div class="text-right">
+                                    @if($docStatus)
+                                        <x-status-badge :status="$docStatus" size="sm" />
+                                    @else
+                                        <span class="inline-flex items-center gap-1 px-2 py-1 text-xs font-bold rounded-full border-2 bg-gray-100 text-gray-600 border-gray-300">
+                                            <span class="text-base leading-none">⚠️</span>
+                                            <span>Status Invalid</span>
+                                        </span>
+                                    @endif
                                 </div>
                             </div>
-                            <div class="text-right">
-                                <x-status-badge :status="$doc->status" size="sm" />
-                            </div>
-                        </div>
-                    </a>
+                        </a>
+                    @endif
                 @endforeach
             </div>
         @else

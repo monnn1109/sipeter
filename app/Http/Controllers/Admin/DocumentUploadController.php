@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\DocumentUploadRequest;
 use App\Models\DocumentRequest;
 use App\Services\{DocumentUploadService, DocumentHistoryService};
-use App\Events\DocumentUploaded;
+use App\Events\{DocumentUploaded, DocumentReadyForPickup};
 use App\Enums\DocumentStatus;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -67,8 +67,8 @@ class DocumentUploadController extends Controller
     }
 
     /**
-     * 🔥 NEW: Submit Final Document (Sudah Ter-embed 3 TTD)
-     * Route: POST /admin/upload/{id}/submit
+     * 📥 Submit Final Document (DOWNLOAD ONLINE - Sudah Ter-embed 3 TTD)
+     * Route: POST /admin/upload/{id}/submit-final
      * Called from: detail.blade.php - Upload Final Document Modal
      */
     public function submitFinalDocument(Request $request, $id)
@@ -83,7 +83,13 @@ class DocumentUploadController extends Controller
 
             $documentRequest = DocumentRequest::with('signatures')->findOrFail($id);
 
-            // ✅ CHECK 1: Semua TTD harus verified (Level 1, 2, 3)
+            // ✅ CHECK 1: Harus DOWNLOAD method
+            if ($documentRequest->delivery_method->value !== 'download') {
+                DB::rollBack();
+                return back()->with('error', '❌ Method ini hanya untuk dokumen Download Online!');
+            }
+
+            // ✅ CHECK 2: Semua TTD harus verified (Level 1, 2, 3)
             $verifiedSignatures = $documentRequest->signatures()
                 ->where('status', 'verified')
                 ->count();
@@ -100,7 +106,7 @@ class DocumentUploadController extends Controller
                 return back()->with('error', '❌ Belum semua TTD diverifikasi! Verified: ' . $verifiedSignatures . '/3');
             }
 
-            // ✅ CHECK 2: Jangan upload 2x
+            // ✅ CHECK 3: Jangan upload 2x
             if ($documentRequest->hasFile()) {
                 DB::rollBack();
                 return back()->with('error', '⚠️ Dokumen final sudah diupload sebelumnya!');
@@ -115,23 +121,24 @@ class DocumentUploadController extends Controller
                 return $this->redirectWithError($documentRequest, $result['message']);
             }
 
-            Log::info('Final document uploaded successfully', [
+            Log::info('Final document uploaded successfully (DOWNLOAD)', [
                 'document_id' => $id,
                 'file_name' => $documentRequest->file_name,
-                'file_size' => $documentRequest->file_size,
+                'delivery_method' => 'download',
                 'admin_id' => auth()->id()
             ]);
 
-            // ✅ UPDATE: Status to READY_FOR_PICKUP
+            // ✅ UPDATE: Status to READY_FOR_PICKUP (auto untuk DOWNLOAD)
             $documentRequest->update([
                 'status' => DocumentStatus::READY_FOR_PICKUP,
+                'ready_at' => now(),
                 'admin_notes' => $request->notes ?? 'Dokumen final sudah ter-embed dengan 3 TTD',
             ]);
 
             // ✅ LOG: Activity ke riwayat
             $this->historyService->logFinalDocumentUploaded($documentRequest);
 
-            Log::info('Final document status updated', [
+            Log::info('Final document status updated to READY_FOR_PICKUP', [
                 'document_id' => $id,
                 'new_status' => DocumentStatus::READY_FOR_PICKUP->value
             ]);
@@ -157,6 +164,96 @@ class DocumentUploadController extends Controller
             return back()
                 ->with('error', '❌ Gagal mengupload dokumen final: ' . $e->getMessage())
                 ->withInput();
+        }
+    }
+
+    /**
+     * 📦 NEW: Mark Document Ready for Pickup (PICKUP FISIK - Manual Embed)
+     * Route: POST /admin/documents/{id}/mark-ready-pickup
+     * Called from: detail.blade.php - "Tandai Dokumen Siap Diambil" button
+     *
+     * PERBEDAAN dengan submitFinalDocument():
+     * - submitFinalDocument() = DOWNLOAD ONLINE (upload PDF final)
+     * - markReadyForPickup() = PICKUP FISIK (tandai siap tanpa upload, karena sudah embed manual)
+     */
+    public function markReadyForPickup(Request $request, $id)
+    {
+        $request->validate([
+            'notes' => 'nullable|string|max:1000'
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $documentRequest = DocumentRequest::with('signatures')->findOrFail($id);
+
+            // ✅ CHECK 1: Harus PICKUP fisik
+            if ($documentRequest->delivery_method->value !== 'pickup') {
+                DB::rollBack();
+                return back()->with('error', '❌ Method ini hanya untuk dokumen Pickup Fisik!');
+            }
+
+            // ✅ CHECK 2: Semua TTD harus verified (Level 1, 2, 3)
+            $verifiedSignatures = $documentRequest->signatures()
+                ->where('status', 'verified')
+                ->count();
+
+            if ($verifiedSignatures < 3) {
+                DB::rollBack();
+
+                Log::warning('Mark ready for pickup - Not all signatures verified', [
+                    'document_id' => $id,
+                    'verified_count' => $verifiedSignatures,
+                    'required_count' => 3
+                ]);
+
+                return back()->with('error', '❌ Belum semua TTD diverifikasi! Verified: ' . $verifiedSignatures . '/3');
+            }
+
+            // ✅ CHECK 3: Jangan tandai 2x
+            if ($documentRequest->status->value === 'ready_for_pickup') {
+                DB::rollBack();
+                return back()->with('error', '⚠️ Dokumen sudah ditandai siap diambil sebelumnya!');
+            }
+
+            // ✅ UPDATE: Status to READY_FOR_PICKUP
+            $documentRequest->update([
+                'status' => DocumentStatus::READY_FOR_PICKUP,
+                'ready_at' => now(),
+                'admin_notes' => $request->notes ?? 'Dokumen siap diambil. Sudah ter-embed dengan 3 TTD secara manual.',
+            ]);
+
+            Log::info('Document marked as ready for pickup (PICKUP FISIK)', [
+                'document_id' => $id,
+                'request_code' => $documentRequest->request_code,
+                'delivery_method' => 'pickup',
+                'admin_id' => auth()->id()
+            ]);
+
+            // ✅ LOG: Activity ke riwayat
+            if (method_exists($this->historyService, 'logDocumentReadyForPickup')) {
+                $this->historyService->logDocumentReadyForPickup($documentRequest);
+            }
+
+            // ✅ EVENT: Fire notifikasi ke user
+            event(new DocumentReadyForPickup($documentRequest->fresh()));
+
+            DB::commit();
+
+            return redirect()
+                ->route('admin.documents.show', $documentRequest->id)
+                ->with('success', '🎉 Dokumen berhasil ditandai Siap Diambil! Notifikasi WA sudah dikirim ke pemohon.');
+
+        } catch (Exception $e) {
+            DB::rollBack();
+
+            Log::error('Mark ready for pickup failed', [
+                'document_id' => $id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return back()->with('error', '❌ Gagal menandai dokumen siap diambil: ' . $e->getMessage());
         }
     }
 

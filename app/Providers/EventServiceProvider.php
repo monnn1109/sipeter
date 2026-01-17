@@ -8,29 +8,37 @@ use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvi
 use Illuminate\Support\Facades\Event;
 
 // Events
-use App\Events\DocumentRequestSubmitted;
-use App\Events\DocumentRequestApproved;
-use App\Events\DocumentRequestRejected;
-use App\Events\DocumentReadyForPickup;
-use App\Events\DocumentUploaded;
-use App\Events\DocumentDownloaded;
-use App\Events\DocumentPickedUp;
-use App\Events\DocumentCompleted;
-use App\Events\DocumentVerificationRequested;
-use App\Events\DocumentVerificationApproved;
-use App\Events\DocumentVerificationRejected;
+use App\Events\{
+    DocumentRequestSubmitted,
+    DocumentRequestApproved,
+    DocumentRequestRejected,
+    DocumentReadyForPickup,
+    DocumentUploaded,
+    DocumentDownloaded,
+    DocumentPickedUp,
+    DocumentCompleted,
+    DocumentVerificationRequested,
+    DocumentVerificationApproved,
+    DocumentVerificationRejected,
+    SignatureVerified 
+};
 
 // Listeners
-use App\Listeners\SendAdminNotification;
-use App\Listeners\SendUserNotification;
-use App\Listeners\SendWhatsAppNotification;
-use App\Listeners\LogDocumentActivity;
-use App\Listeners\SendVerificationRequestNotification;
-use App\Listeners\NotifyAdminVerificationApproved;
-use App\Listeners\NotifyAdminVerificationRejected;
+use App\Listeners\{
+    SendAdminNotification,
+    SendUserNotification,
+    SendWhatsAppNotification,
+    LogDocumentActivity,
+    SendVerificationRequestNotification,
+    NotifyAdminVerificationApproved,
+    NotifyAdminVerificationRejected,
+    NotifyAuthoritySignatureVerified,
+    NotifyAllSignaturesVerified
+};
 
 class EventServiceProvider extends ServiceProvider
 {
+
     protected $listen = [
         Registered::class => [
             SendEmailVerificationNotification::class,
@@ -43,6 +51,7 @@ class EventServiceProvider extends ServiceProvider
             LogDocumentActivity::class,
         ],
 
+        // Document Request Approved
         DocumentRequestApproved::class => [
             SendUserNotification::class,
             SendWhatsAppNotification::class,
@@ -101,15 +110,18 @@ class EventServiceProvider extends ServiceProvider
             NotifyAdminVerificationApproved::class,
         ],
 
-        // Document Verification Rejected
         DocumentVerificationRejected::class => [
             NotifyAdminVerificationRejected::class,
+        ],
+
+        SignatureVerified::class => [
+            NotifyAuthoritySignatureVerified::class,
+            NotifyAllSignaturesVerified::class,
         ],
     ];
 
     public function boot(): void
     {
-        //
     }
 
     public function shouldDiscoverEvents(): bool

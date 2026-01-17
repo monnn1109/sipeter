@@ -17,7 +17,6 @@ class DashboardController extends Controller
             'ready' => DocumentRequest::where('status', 'ready_for_pickup')->count(),
             'completed' => DocumentRequest::whereIn('status', ['completed', 'picked_up'])->count(),
 
-            // FIX: Query verification via relation
             'waiting_verification' => DocumentRequest::whereHas('documentVerification', function($q) {
                 $q->where('status', 'requested');
             })->count(),

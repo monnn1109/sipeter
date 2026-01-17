@@ -1,248 +1,341 @@
 @extends('layouts.admin')
 
-@section('title', 'Kirim Request Verifikasi 3 Level')
+@section('title', 'Request Verifikasi 3 Level')
 
 @section('content')
-<div class="container mx-auto px-4 py-8">
+<div class="container mx-auto px-4 py-8 max-w-7xl">
+    {{-- Breadcrumb --}}
     <nav class="mb-6 text-sm">
         <ol class="flex items-center space-x-2 text-gray-600">
-            <li><a href="{{ route('admin.dashboard') }}" class="hover:text-blue-600">Dashboard</a></li>
-            <li>/</li>
-            <li><a href="{{ route('admin.documents.index') }}" class="hover:text-blue-600">Documents</a></li>
-            <li>/</li>
-            <li><a href="{{ route('admin.documents.show', $document->id) }}" class="hover:text-blue-600">{{ $document->request_code }}</a></li>
-            <li>/</li>
-            <li class="text-gray-800 font-medium">Send Verification</li>
+            <li><a href="{{ route('admin.dashboard') }}" class="hover:text-blue-600 transition">Dashboard</a></li>
+            <li><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path></svg></li>
+            <li><a href="{{ route('admin.documents.index') }}" class="hover:text-blue-600 transition">Documents</a></li>
+            <li><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path></svg></li>
+            <li><a href="{{ route('admin.documents.show', $document->id) }}" class="hover:text-blue-600 transition">{{ $document->request_code }}</a></li>
+            <li><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path></svg></li>
+            <li class="text-gray-900 font-semibold">Verifikasi</li>
         </ol>
     </nav>
 
-    <div class="mb-6">
-        <h1 class="text-3xl font-bold text-gray-800 mb-2">📋 Request Verifikasi 3 Level</h1>
-        <p class="text-gray-600">Sistem akan mengirim request verifikasi secara otomatis ke 3 level pejabat</p>
-    </div>
-
-    <div class="bg-white rounded-xl shadow-lg overflow-hidden mb-6">
-        <div class="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4">
-            <h2 class="text-xl font-semibold text-white">📄 Informasi Dokumen</h2>
-        </div>
-        <div class="p-6">
-            <div class="grid md:grid-cols-2 gap-6">
-                <div>
-                    <label class="text-sm text-gray-600">No. Dokumen</label>
-                    <p class="text-lg font-semibold text-gray-800">{{ $document->request_code }}</p>
-                </div>
-                <div>
-                    <label class="text-sm text-gray-600">Jenis Dokumen</label>
-                    <p class="text-lg font-semibold text-gray-800">{{ $document->documentType->name }}</p>
-                </div>
-                <div>
-                    <label class="text-sm text-gray-600">Pemohon</label>
-                    <p class="text-lg font-semibold text-gray-800">{{ $document->applicant_name }}</p>
-                </div>
-                <div>
-                    <label class="text-sm text-gray-600">{{ $document->applicant_type->value === 'mahasiswa' ? 'NIM' : 'NIP' }}</label>
-                    <p class="text-lg font-semibold text-gray-800">{{ $document->applicant_identifier }}</p>
-                </div>
-                @if($document->applicant_unit)
-                <div>
-                    <label class="text-sm text-gray-600">Program Studi / Unit</label>
-                    <p class="text-lg font-semibold text-gray-800">{{ $document->applicant_unit }}</p>
-                </div>
-                @endif
-                <div>
-                    <label class="text-sm text-gray-600">Tanggal Request</label>
-                    <p class="text-lg font-semibold text-gray-800">{{ $document->created_at->format('d F Y, H:i') }} WIB</p>
-                </div>
+    {{-- Header --}}
+    <div class="mb-8">
+        <div class="flex items-center gap-3 mb-2">
+            <div class="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center shadow-lg">
+                <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+            </div>
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900">Request Verifikasi 3 Level</h1>
+                <p class="text-gray-600 mt-1">Sistem akan mengirim ke 3 pejabat secara berurutan</p>
             </div>
         </div>
     </div>
 
-    <div class="bg-white rounded-xl shadow-lg overflow-hidden mb-6">
-        <div class="bg-gradient-to-r from-purple-600 to-pink-600 px-6 py-4">
-            <h2 class="text-xl font-semibold text-white">🔄 Alur Verifikasi 3 Level</h2>
-        </div>
-        <div class="p-6">
-            <div class="bg-blue-50 border-2 border-blue-200 rounded-lg p-6 mb-4">
-                <div class="flex items-start">
-                    <svg class="w-6 h-6 text-blue-600 mr-3 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
-                    </svg>
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {{-- LEFT COLUMN: Document Info --}}
+        <div class="lg:col-span-1 space-y-6">
+            {{-- Document Card --}}
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+                <div class="bg-gradient-to-r from-blue-500 to-indigo-600 px-5 py-4">
+                    <h2 class="text-lg font-semibold text-white flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        Informasi Dokumen
+                    </h2>
+                </div>
+                <div class="p-5 space-y-4">
+                    <div>
+                        <label class="text-xs font-semibold text-gray-500 uppercase tracking-wider">No. Dokumen</label>
+                        <p class="text-lg font-bold text-gray-900 mt-1">{{ $document->request_code }}</p>
+                    </div>
+                    <div class="border-t pt-4">
+                        <label class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Jenis Dokumen</label>
+                        <p class="text-base font-semibold text-gray-800 mt-1">{{ $document->documentType->name }}</p>
+                    </div>
+                    <div class="border-t pt-4">
+                        <label class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Pemohon</label>
+                        <p class="text-base font-semibold text-gray-800 mt-1">{{ $document->applicant_name }}</p>
+                        <p class="text-sm text-gray-600 mt-1">{{ $document->applicant_type->value === 'mahasiswa' ? 'NIM' : 'NIP' }}: {{ $document->applicant_identifier }}</p>
+                    </div>
+                    @if($document->applicant_unit)
+                    <div class="border-t pt-4">
+                        <label class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Program Studi/Unit</label>
+                        <p class="text-base text-gray-800 mt-1">{{ $document->applicant_unit }}</p>
+                    </div>
+                    @endif
+                    <div class="border-t pt-4">
+                        <label class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Tanggal Request</label>
+                        <p class="text-base text-gray-800 mt-1">{{ $document->created_at->format('d F Y, H:i') }} WIB</p>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Timeline Estimasi --}}
+            <div class="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl shadow-sm border-2 border-amber-200 p-5">
+                <div class="flex items-start gap-3">
+                    <div class="w-10 h-10 bg-amber-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
                     <div class="flex-1">
-                        <p class="font-semibold text-blue-900 mb-2">ℹ️ Sistem Otomatis:</p>
-                        <p class="text-blue-800 text-sm">
-                            Sistem akan <strong>otomatis mengirim WhatsApp</strong> ke 3 level pejabat secara berurutan.
-                            Setelah Level 1 approve, otomatis lanjut ke Level 2, dst.
+                        <h3 class="font-bold text-amber-900 mb-3">⏱️ Estimasi Waktu</h3>
+                        <div class="space-y-2 text-sm text-amber-800">
+                            <div class="flex items-start gap-2">
+                                <span class="text-amber-500 font-bold">•</span>
+                                <span><strong>1-24 jam</strong> per level</span>
+                            </div>
+                            <div class="flex items-start gap-2">
+                                <span class="text-amber-500 font-bold">•</span>
+                                <span>Link berlaku <strong>3 hari</strong></span>
+                            </div>
+                            <div class="flex items-start gap-2">
+                                <span class="text-amber-500 font-bold">•</span>
+                                <span>Total: <strong>1-3 hari kerja</strong></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {{-- RIGHT COLUMN: Verification Flow --}}
+        <div class="lg:col-span-2 space-y-6">
+            {{-- Info Banner --}}
+            <div class="bg-gradient-to-r from-blue-500 to-indigo-600 rounded-2xl shadow-lg p-6 text-white">
+                <div class="flex items-start gap-4">
+                    <div class="w-12 h-12 bg-white/20 backdrop-blur rounded-xl flex items-center justify-center flex-shrink-0">
+                        <svg class="w-7 h-7" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+                        </svg>
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="text-lg font-bold mb-2">🔄 Sistem Otomatis & Berurutan</h3>
+                        <p class="text-blue-100 text-sm leading-relaxed">
+                            Sistem akan kirim WhatsApp ke Level 1. Setelah approved, <strong>otomatis lanjut</strong> ke Level 2, kemudian Level 3. Anda tidak perlu intervensi manual.
                         </p>
                     </div>
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div class="bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-300 rounded-lg p-4">
-                    <div class="flex items-center gap-3 mb-3">
-                        <div class="bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold">
-                            1
-                        </div>
-                        <div>
-                            <p class="text-xs text-blue-600 font-semibold">LEVEL 1</p>
-                            <p class="text-sm font-bold text-gray-800">Ketua Akademik</p>
-                        </div>
-                    </div>
-                    <div class="bg-white rounded p-3 text-sm">
-                        <p class="font-semibold text-gray-800 mb-1">{{ $ketuaAkademik->name }}</p>
-                        <p class="text-xs text-gray-600">{{ $ketuaAkademik->position }}</p>
-                        <p class="text-xs text-gray-500 mt-1">📱 {{ $ketuaAkademik->phone }}</p>
-                    </div>
-                    <div class="mt-3 text-center">
-                        <span class="text-xs bg-blue-600 text-white px-3 py-1 rounded-full font-semibold">
-                            Progress: 33%
-                        </span>
-                    </div>
+            {{-- Verification Flow Visual --}}
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+                <div class="bg-gradient-to-r from-purple-500 to-pink-500 px-6 py-4">
+                    <h2 class="text-lg font-semibold text-white flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
+                        </svg>
+                        Alur Verifikasi
+                    </h2>
                 </div>
 
-                <div class="hidden md:flex items-center justify-center">
-                    <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
-                    </svg>
-                </div>
+                <div class="p-6">
+                    {{-- Level 1 --}}
+                    <div class="relative">
+                        <div class="flex items-start gap-4">
+                            <div class="flex flex-col items-center flex-shrink-0">
+                                <div class="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
+                                    <span class="text-white text-xl font-bold">1</span>
+                                </div>
+                                <div class="w-0.5 h-24 bg-gradient-to-b from-blue-400 to-purple-400 mt-3"></div>
+                            </div>
+                            <div class="flex-1 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-5 border-2 border-blue-200">
+                                <div class="flex items-center justify-between mb-3">
+                                    <div>
+                                        <span class="inline-block px-3 py-1 bg-blue-600 text-white text-xs font-bold rounded-full mb-2">LEVEL 1</span>
+                                        <h3 class="text-lg font-bold text-gray-900">Ketua Akademik</h3>
+                                    </div>
+                                    <div class="text-right">
+                                        <span class="text-2xl font-bold text-blue-600">33%</span>
+                                        <p class="text-xs text-gray-500">Progress</p>
+                                    </div>
+                                </div>
+                                <div class="bg-white rounded-lg p-4 shadow-sm">
+                                    <p class="font-bold text-gray-900 mb-1">{{ $ketuaAkademik->name }}</p>
+                                    <p class="text-sm text-gray-600 mb-2">{{ $ketuaAkademik->position }}</p>
+                                    <p class="text-sm text-gray-500 flex items-center gap-1">
+                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                            <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"></path>
+                                        </svg>
+                                        {{ $ketuaAkademik->phone }}
+                                    </p>
+                                </div>
+                                <div class="mt-3 flex items-center gap-2 text-sm text-blue-700">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                                    </svg>
+                                    <span class="font-semibold">Akan menerima WhatsApp otomatis</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
-                <div class="bg-gradient-to-br from-purple-50 to-purple-100 border-2 border-purple-300 rounded-lg p-4">
-                    <div class="flex items-center gap-3 mb-3">
-                        <div class="bg-purple-600 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold">
-                            2
+                    {{-- Level 2 --}}
+                    <div class="relative">
+                        <div class="flex items-start gap-4">
+                            <div class="flex flex-col items-center flex-shrink-0">
+                                <div class="w-14 h-14 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
+                                    <span class="text-white text-xl font-bold">2</span>
+                                </div>
+                                <div class="w-0.5 h-24 bg-gradient-to-b from-purple-400 to-green-400 mt-3"></div>
+                            </div>
+                            <div class="flex-1 bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-5 border-2 border-purple-200">
+                                <div class="flex items-center justify-between mb-3">
+                                    <div>
+                                        <span class="inline-block px-3 py-1 bg-purple-600 text-white text-xs font-bold rounded-full mb-2">LEVEL 2</span>
+                                        <h3 class="text-lg font-bold text-gray-900">Wakil Ketua 3</h3>
+                                    </div>
+                                    <div class="text-right">
+                                        <span class="text-2xl font-bold text-purple-600">66%</span>
+                                        <p class="text-xs text-gray-500">Progress</p>
+                                    </div>
+                                </div>
+                                <div class="bg-white/80 backdrop-blur rounded-lg p-4 border border-purple-200">
+                                    <p class="text-sm text-gray-600 italic mb-2">🔄 Otomatis setelah Level 1 approved</p>
+                                    <p class="text-xs text-gray-500">Bidang Kemahasiswaan</p>
+                                </div>
+                            </div>
                         </div>
-                        <div>
-                            <p class="text-xs text-purple-600 font-semibold">LEVEL 2</p>
-                            <p class="text-sm font-bold text-gray-800">Wakil Ketua 3</p>
-                        </div>
                     </div>
-                    <div class="bg-white rounded p-3 text-sm">
-                        <p class="text-xs text-gray-500 italic">Otomatis setelah Level 1 ✅</p>
-                        <p class="text-xs text-gray-400 mt-1">Kemahasiswaan</p>
-                    </div>
-                    <div class="mt-3 text-center">
-                        <span class="text-xs bg-purple-600 text-white px-3 py-1 rounded-full font-semibold">
-                            Progress: 66%
-                        </span>
-                    </div>
-                </div>
 
-                <div class="hidden md:flex items-center justify-center md:col-start-2">
-                    <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
-                    </svg>
-                </div>
-
-                <div class="bg-gradient-to-br from-green-50 to-green-100 border-2 border-green-300 rounded-lg p-4">
-                    <div class="flex items-center gap-3 mb-3">
-                        <div class="bg-green-600 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold">
-                            3
+                    {{-- Level 3 --}}
+                    <div class="relative">
+                        <div class="flex items-start gap-4">
+                            <div class="flex flex-col items-center flex-shrink-0">
+                                <div class="w-14 h-14 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center shadow-lg">
+                                    <span class="text-white text-xl font-bold">3</span>
+                                </div>
+                            </div>
+                            <div class="flex-1 bg-gradient-to-br from-green-50 to-emerald-100 rounded-xl p-5 border-2 border-green-200">
+                                <div class="flex items-center justify-between mb-3">
+                                    <div>
+                                        <span class="inline-block px-3 py-1 bg-green-600 text-white text-xs font-bold rounded-full mb-2">LEVEL 3 - FINAL</span>
+                                        <h3 class="text-lg font-bold text-gray-900">Direktur</h3>
+                                    </div>
+                                    <div class="text-right">
+                                        <span class="text-2xl font-bold text-green-600">100%</span>
+                                        <p class="text-xs text-gray-500">Complete</p>
+                                    </div>
+                                </div>
+                                <div class="bg-white/80 backdrop-blur rounded-lg p-4 border border-green-200">
+                                    <p class="text-sm text-gray-600 italic mb-2">🔄 Otomatis setelah Level 2 approved</p>
+                                    <p class="text-xs text-gray-500">Final Approval → Lanjut TTD</p>
+                                </div>
+                            </div>
                         </div>
-                        <div>
-                            <p class="text-xs text-green-600 font-semibold">LEVEL 3 - FINAL</p>
-                            <p class="text-sm font-bold text-gray-800">Direktur</p>
-                        </div>
-                    </div>
-                    <div class="bg-white rounded p-3 text-sm">
-                        <p class="text-xs text-gray-500 italic">Otomatis setelah Level 2 ✅</p>
-                        <p class="text-xs text-gray-400 mt-1">Final Approval</p>
-                    </div>
-                    <div class="mt-3 text-center">
-                        <span class="text-xs bg-green-600 text-white px-3 py-1 rounded-full font-semibold">
-                            Progress: 100%
-                        </span>
                     </div>
                 </div>
             </div>
 
-            <div class="mt-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                <div class="flex items-start">
-                    <svg class="w-5 h-5 text-yellow-600 mr-3 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"></path>
-                    </svg>
-                    <div class="text-sm">
-                        <p class="font-medium text-yellow-900 mb-1">⏱️ Estimasi Waktu:</p>
-                        <ul class="text-yellow-800 space-y-1">
-                            <li>• Setiap level: <strong>1-24 jam</strong> (tergantung pejabat)</li>
-                            <li>• Link verifikasi berlaku: <strong>3 hari per level</strong></li>
-                            <li>• Total estimasi: <strong>1-3 hari kerja</strong> untuk semua level</li>
-                        </ul>
+            {{-- Action Flow --}}
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+                <div class="bg-gradient-to-r from-green-500 to-emerald-600 px-6 py-4">
+                    <h2 class="text-lg font-semibold text-white flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        Yang Akan Terjadi
+                    </h2>
+                </div>
+                <div class="p-6">
+                    <div class="space-y-4">
+                        <div class="flex items-start gap-4 group">
+                            <div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition">
+                                <span class="text-blue-600 font-bold">1</span>
+                            </div>
+                            <div class="flex-1">
+                                <p class="text-gray-800"><strong class="text-gray-900">WhatsApp otomatis</strong> ke {{ $ketuaAkademik->name }}</p>
+                                <p class="text-sm text-gray-500 mt-1">Level 1 - Ketua Akademik</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-4 group">
+                            <div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition">
+                                <span class="text-blue-600 font-bold">2</span>
+                            </div>
+                            <div class="flex-1">
+                                <p class="text-gray-800">Pejabat buka link → <strong class="text-gray-900">Approve/Reject</strong> via web</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-4 group">
+                            <div class="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition">
+                                <span class="text-purple-600 font-bold">3</span>
+                            </div>
+                            <div class="flex-1">
+                                <p class="text-gray-800">Jika approved → <strong class="text-gray-900">Auto lanjut Level 2</strong></p>
+                                <p class="text-sm text-gray-500 mt-1">Tanpa intervensi manual</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-4 group">
+                            <div class="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition">
+                                <span class="text-purple-600 font-bold">4</span>
+                            </div>
+                            <div class="flex-1">
+                                <p class="text-gray-800">Level 2 approved → <strong class="text-gray-900">Auto lanjut Level 3</strong></p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-4 group">
+                            <div class="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition">
+                                <span class="text-green-600 font-bold">✓</span>
+                            </div>
+                            <div class="flex-1">
+                                <p class="text-gray-800"><strong class="text-green-600">Selesai!</strong> Lanjut ke <strong class="text-gray-900">Request TTD</strong></p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
 
-    <div class="bg-white rounded-xl shadow-lg overflow-hidden">
-        <div class="bg-gradient-to-r from-green-600 to-emerald-600 px-6 py-4">
-            <h2 class="text-xl font-semibold text-white">✅ Konfirmasi Pengiriman</h2>
-        </div>
-
-        <form action="{{ route('admin.verifications.send', $document->id) }}" method="POST" class="p-6">
-            @csrf
-
-            <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-200 rounded-lg p-5 mb-6">
-                <div class="flex items-start">
-                    <div class="bg-blue-600 text-white p-2 rounded-lg mr-4">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+            {{-- Warning --}}
+            <div class="bg-gradient-to-br from-red-50 to-rose-50 rounded-2xl border-2 border-red-200 p-5">
+                <div class="flex items-start gap-4">
+                    <div class="w-10 h-10 bg-red-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
                         </svg>
                     </div>
                     <div class="flex-1">
-                        <p class="font-bold text-gray-900 text-lg mb-2">🚀 Yang Akan Terjadi:</p>
-                        <ol class="space-y-2 text-sm text-gray-700">
+                        <h3 class="font-bold text-red-900 mb-2">⚠️ Perhatian Penting!</h3>
+                        <ul class="space-y-1.5 text-sm text-red-800">
                             <li class="flex items-start gap-2">
-                                <span class="bg-blue-600 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">1</span>
-                                <span>Sistem akan <strong>otomatis kirim WhatsApp</strong> ke <strong>{{ $ketuaAkademik->name }}</strong> (Level 1 - Ketua Akademik)</span>
+                                <span class="text-red-500 font-bold mt-0.5">•</span>
+                                <span>Jika <strong>ditolak di level manapun</strong>, proses <strong>BERHENTI</strong></span>
                             </li>
                             <li class="flex items-start gap-2">
-                                <span class="bg-blue-600 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">2</span>
-                                <span>Ketua Akademik membuka link dan <strong>Approve/Reject</strong> via web</span>
+                                <span class="text-red-500 font-bold mt-0.5">•</span>
+                                <span>Pastikan data dokumen sudah benar</span>
                             </li>
                             <li class="flex items-start gap-2">
-                                <span class="bg-purple-600 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">3</span>
-                                <span>Jika <strong>Approved</strong>, sistem <strong>otomatis kirim</strong> ke Level 2 (Wakil Ketua 3)</span>
+                                <span class="text-red-500 font-bold mt-0.5">•</span>
+                                <span>Anda akan dapat notifikasi di setiap progress</span>
                             </li>
-                            <li class="flex items-start gap-2">
-                                <span class="bg-purple-600 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">4</span>
-                                <span>Setelah Level 2 approved, <strong>otomatis lanjut</strong> ke Level 3 (Direktur)</span>
-                            </li>
-                            <li class="flex items-start gap-2">
-                                <span class="bg-green-600 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">5</span>
-                                <span><strong>Selesai!</strong> Setelah Level 3 approved, lanjut ke <strong>Request TTD</strong></span>
-                            </li>
-                        </ol>
-                    </div>
-                </div>
-            </div>
-
-            <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-                <div class="flex items-start">
-                    <svg class="w-5 h-5 text-red-600 mr-3 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
-                    </svg>
-                    <div class="text-sm">
-                        <p class="font-medium text-red-900 mb-1">⚠️ Penting:</p>
-                        <ul class="text-red-800 space-y-1">
-                            <li>• Jika <strong>ditolak di level manapun</strong>, proses akan <strong>BERHENTI</strong></li>
-                            <li>• Pastikan semua data dokumen sudah benar sebelum kirim</li>
-                            <li>• Anda akan menerima notifikasi di setiap progress level</li>
                         </ul>
                     </div>
                 </div>
             </div>
 
-            <div class="flex gap-4">
-                <a href="{{ route('admin.documents.show', $document->id) }}"
-                   class="flex-1 px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-semibold transition text-center">
-                    ❌ Batal
-                </a>
-                <button type="submit"
-                        class="flex-1 px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 font-semibold transition shadow-lg">
-                    🚀 Mulai Verifikasi 3 Level
-                </button>
-            </div>
-        </form>
+            {{-- Action Buttons --}}
+            <form action="{{ route('admin.verifications.send', $document->id) }}" method="POST">
+                @csrf
+                <div class="flex gap-4">
+                    <a href="{{ route('admin.documents.show', $document->id) }}"
+                       class="flex-1 px-6 py-4 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-bold transition text-center flex items-center justify-center gap-2 border-2 border-gray-300">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                        Batal
+                    </a>
+                    <button type="submit"
+                            class="flex-1 px-6 py-4 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-xl font-bold transition shadow-lg hover:shadow-xl text-center flex items-center justify-center gap-2 transform hover:scale-105">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                        </svg>
+                        Mulai Verifikasi 3 Level
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 @endsection

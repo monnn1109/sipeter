@@ -8,7 +8,7 @@ use App\Http\Controllers\Guest\{
     DocumentDownloadController as GuestDownloadController,
     VerificationController,
     SignatureUploadController,
-    TrackingController 
+    TrackingController
 };
 use App\Http\Controllers\Internal\{
     DashboardController as InternalDashboardController,
@@ -46,7 +46,7 @@ Route::prefix('mahasiswa')->name('mahasiswa.')->group(function () {
     Route::get('/tracking/{code}', [TrackingController::class, 'show'])->name('tracking.detail');
 });
 
-// Guest Document Download
+// Guest Document Download (untuk DOWNLOAD ONLINE)
 Route::prefix('guest/documents')->name('guest.documents.')->group(function () {
     Route::get('/{id}/download', [GuestDownloadController::class, 'download'])->name('download');
     Route::get('/{id}/preview', [GuestDownloadController::class, 'preview'])->name('preview');
@@ -129,12 +129,21 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
         Route::get('/', [DocumentManagementController::class, 'index'])->name('index');
         Route::get('/pending', [DocumentManagementController::class, 'pending'])->name('pending');
         Route::get('/{id}', [DocumentManagementController::class, 'show'])->name('show');
-
         Route::post('/{id}/approve', [DocumentManagementController::class, 'approve'])->name('approve');
         Route::post('/{id}/reject', [DocumentManagementController::class, 'reject'])->name('reject');
         Route::post('/{id}/status', [DocumentManagementController::class, 'updateStatus'])->name('update-status');
         Route::post('/{id}/note', [DocumentManagementController::class, 'addNote'])->name('add-note');
         Route::get('/{id}/download', [DocumentManagementController::class, 'download'])->name('download');
+        Route::get('/{id}/send-signature', [DocumentManagementController::class, 'showSendSignatureForm'])->name('send-signature.form');
+
+        // 🔥 PICKUP FISIK ROUTES - DocumentManagementController (BUKAN DocumentUploadController)
+        // Step 1: Tandai "Siap Diambil" (setelah semua TTD verified, embed manual selesai)
+        Route::post('/{id}/mark-ready-pickup', [DocumentManagementController::class, 'markAsReadyForPickup'])
+            ->name('mark-ready-pickup');
+
+        // Step 2: Tandai "Sudah Diambil" (setelah user datang dan ambil fisik)
+        Route::post('/{id}/mark-picked-up', [DocumentManagementController::class, 'markAsPickedUp'])
+            ->name('mark-picked-up');
 
         Route::get('/stats/all', [DocumentManagementController::class, 'getStats'])->name('stats');
     });
@@ -194,11 +203,14 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
         Route::get('/stats', [SignatureManagementController::class, 'getStats'])->name('stats');
     });
 
-    // Document Upload
+    // Document Upload - DocumentUploadController
     Route::prefix('upload')->name('upload.')->group(function () {
         Route::get('/{id}', [DocumentUploadController::class, 'show'])->name('show');
         Route::post('/{id}', [DocumentUploadController::class, 'upload'])->name('submit');
+
+        // 📥 DOWNLOAD ONLINE: Upload dokumen final (sudah ter-embed 3 TTD)
         Route::post('/{id}/final', [DocumentUploadController::class, 'submitFinalDocument'])->name('submit-final');
+
         Route::delete('/{id}', [DocumentUploadController::class, 'delete'])->name('delete');
     });
 

@@ -60,6 +60,25 @@
             };
         @endphp
 
+        {{-- ✅ FIX: Display Error Messages (Global) --}}
+        @if($errors->any())
+            <div class="bg-red-50 border-2 border-red-500 rounded-lg p-4 mb-6 shadow-lg">
+                <div class="flex items-start">
+                    <svg class="w-6 h-6 text-red-600 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+                    </svg>
+                    <div class="flex-1">
+                        <h3 class="text-lg font-bold text-red-800 mb-2">❌ Validasi Gagal!</h3>
+                        <ul class="list-disc list-inside space-y-1 text-red-700">
+                            @foreach($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        @endif
+
         <div class="text-center mb-8">
             <div class="inline-block p-4 bg-white rounded-full shadow-lg mb-4">
                 <svg class="w-16 h-16 {{ $levelConfig['iconColor'] }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -139,7 +158,7 @@
                 </div>
             </div>
 
-            <form action="{{ route('verification.submit', $verification->token) }}" method="POST" class="p-6">
+            <form action="{{ route('verification.submit', $verification->token) }}" method="POST" class="p-6" id="verificationForm">
                 @csrf
 
                 <div class="mb-6">
@@ -207,7 +226,7 @@
 
                     <div class="space-y-3">
                         <label class="flex items-center p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:bg-green-50 hover:border-green-500 transition" for="approve">
-                            <input type="radio" name="decision" value="approved" id="approve" class="w-5 h-5 text-green-600" required>
+                            <input type="radio" name="decision" value="approved" id="approve" class="w-5 h-5 text-green-600" {{ old('decision') === 'approved' ? 'checked' : '' }} required>
                             <div class="ml-3">
                                 <span class="font-semibold text-gray-800">✅ Disetujui (Level {{ $level }})</span>
                                 <p class="text-sm text-gray-600">
@@ -223,7 +242,7 @@
                         </label>
 
                         <label class="flex items-center p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:bg-red-50 hover:border-red-500 transition" for="reject">
-                            <input type="radio" name="decision" value="rejected" id="reject" class="w-5 h-5 text-red-600" required>
+                            <input type="radio" name="decision" value="rejected" id="reject" class="w-5 h-5 text-red-600" {{ old('decision') === 'rejected' ? 'checked' : '' }} required>
                             <div class="ml-3">
                                 <span class="font-semibold text-gray-800">❌ Ditolak (Level {{ $level }})</span>
                                 <p class="text-sm text-gray-600">Dokumen tidak layak - Proses BERHENTI</p>
@@ -232,36 +251,38 @@
                     </div>
 
                     @error('decision')
-                        <p class="text-red-500 text-sm mt-2">{{ $message }}</p>
+                        <p class="text-red-600 text-sm mt-2 font-semibold flex items-center gap-1">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                            </svg>
+                            {{ $message }}
+                        </p>
                     @enderror
                 </div>
 
-                <div id="notes-section" class="mb-6 hidden">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">
-                        Catatan / Alasan Penolakan: <span class="text-red-500">*</span>
-                    </label>
-                    <textarea
-                        name="notes"
-                        rows="4"
-                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                        placeholder="Jelaskan alasan penolakan secara detail..."
-                    >{{ old('notes') }}</textarea>
-                    @error('notes')
-                        <p class="text-red-500 text-sm mt-2">{{ $message }}</p>
-                    @enderror
-                    <p class="text-sm text-gray-500 mt-2">Maksimal 1000 karakter</p>
-                </div>
-
-                <div id="notes-optional-section" class="mb-6 hidden">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                {{-- ✅ FIX: SINGLE DYNAMIC TEXTAREA --}}
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2" id="notesLabel">
                         Catatan (opsional):
                     </label>
                     <textarea
                         name="notes"
-                        rows="3"
-                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        id="notesTextarea"
+                        rows="4"
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                         placeholder="Tambahkan catatan jika diperlukan..."
                     >{{ old('notes') }}</textarea>
+
+                    @error('notes')
+                        <p class="text-red-600 text-sm mt-2 font-semibold flex items-center gap-1">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                            </svg>
+                            {{ $message }}
+                        </p>
+                    @enderror
+
+                    <p class="text-sm text-gray-500 mt-2" id="notesHint">Maksimal 1000 karakter</p>
                 </div>
 
                 <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
@@ -305,23 +326,41 @@
 document.addEventListener('DOMContentLoaded', function() {
     const approveRadio = document.getElementById('approve');
     const rejectRadio = document.getElementById('reject');
-    const notesSection = document.getElementById('notes-section');
-    const notesOptionalSection = document.getElementById('notes-optional-section');
+    const notesTextarea = document.getElementById('notesTextarea');
+    const notesLabel = document.getElementById('notesLabel');
+    const notesHint = document.getElementById('notesHint');
 
-    function toggleNotes() {
+    // ✅ FIX: Dynamic textarea behavior
+    function updateNotesField() {
         if (rejectRadio.checked) {
-            notesSection.classList.remove('hidden');
-            notesOptionalSection.classList.add('hidden');
-            notesSection.querySelector('textarea').required = true;
+            // Jika TOLAK dipilih
+            notesLabel.innerHTML = 'Catatan / Alasan Penolakan: <span class="text-red-500">*</span>';
+            notesTextarea.required = true;
+            notesTextarea.placeholder = 'Jelaskan alasan penolakan secara detail...';
+            notesTextarea.classList.remove('border-gray-300', 'focus:ring-blue-500');
+            notesTextarea.classList.add('border-red-300', 'focus:ring-red-500');
+            notesHint.classList.remove('text-gray-500');
+            notesHint.classList.add('text-red-600');
+            notesHint.textContent = '⚠️ WAJIB DIISI! Maksimal 1000 karakter';
         } else if (approveRadio.checked) {
-            notesSection.classList.add('hidden');
-            notesOptionalSection.classList.remove('hidden');
-            notesSection.querySelector('textarea').required = false;
+            // Jika SETUJU dipilih
+            notesLabel.innerHTML = 'Catatan (opsional):';
+            notesTextarea.required = false;
+            notesTextarea.placeholder = 'Tambahkan catatan jika diperlukan...';
+            notesTextarea.classList.remove('border-red-300', 'focus:ring-red-500');
+            notesTextarea.classList.add('border-gray-300', 'focus:ring-blue-500');
+            notesHint.classList.remove('text-red-600');
+            notesHint.classList.add('text-gray-500');
+            notesHint.textContent = 'Maksimal 1000 karakter';
         }
     }
 
-    approveRadio.addEventListener('change', toggleNotes);
-    rejectRadio.addEventListener('change', toggleNotes);
+    // Event listeners
+    approveRadio.addEventListener('change', updateNotesField);
+    rejectRadio.addEventListener('change', updateNotesField);
+
+    // ✅ Initialize on page load (handle old() values)
+    updateNotesField();
 });
 </script>
 @endsection

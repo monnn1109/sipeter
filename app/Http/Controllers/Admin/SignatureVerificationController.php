@@ -20,9 +20,6 @@ class SignatureVerificationController extends Controller
         $this->signatureService = $signatureService;
     }
 
-    /**
-     * ✅ FIXED: List signatures untuk verifikasi
-     */
     public function index(Request $request)
     {
         $query = DocumentSignature::with([
@@ -58,7 +55,6 @@ class SignatureVerificationController extends Controller
 
         $authorities = \App\Models\SignatureAuthority::active()->orderBy('name')->get();
 
-        // ✅ FIXED: Kirim flag 'showList' = true
         return view('admin.signatures.verify', compact(
             'signatures',
             'uploadedCount',
@@ -68,9 +64,6 @@ class SignatureVerificationController extends Controller
         ))->with('showList', true);
     }
 
-    /**
-     * ✅ FIXED: Form detail verifikasi 1 signature
-     */
     public function verifyForm($id)
     {
         $signature = DocumentSignature::with([
@@ -88,23 +81,15 @@ class SignatureVerificationController extends Controller
             ->take(4)
             ->get();
 
-        // ✅ FIXED: Kirim $signature + flag 'showList' = false
         return view('admin.signatures.verify', compact('signature', 'previousSignatures'))
             ->with('showList', false);
     }
 
-    /**
-     * 🆕 Preview Signature (Called from detail.blade.php JavaScript)
-     *
-     * Opens signature image directly in new tab
-     * Route: GET /admin/signatures/{id}/preview
-     */
     public function preview($id)
     {
         try {
             $signature = DocumentSignature::findOrFail($id);
 
-            // Check if signature file exists
             if (!$signature->signature_file) {
                 abort(404, 'File TTD tidak ditemukan');
             }
@@ -117,18 +102,15 @@ class SignatureVerificationController extends Controller
                 abort(404, 'File TTD tidak ditemukan di storage');
             }
 
-            // Get file path and mime type
             $filePath = Storage::path($signature->signature_file);
             $mimeType = Storage::mimeType($signature->signature_file);
 
-            // Log preview access
             Log::info('Signature file previewed', [
                 'signature_id' => $id,
                 'admin_id' => Auth::id(),
                 'admin_name' => Auth::user()->name ?? 'Unknown'
             ]);
 
-            // Return image file directly for browser display
             return response()->file($filePath, [
                 'Content-Type' => $mimeType,
                 'Content-Disposition' => 'inline; filename="TTD_Level_' . $signature->signature_level . '.png"'
@@ -144,12 +126,6 @@ class SignatureVerificationController extends Controller
         }
     }
 
-    /**
-     * ✅ FIXED: Approve signature (3-Level Sequential Logic + UPDATE current_signature_step)
-     *
-     * Route: POST /admin/signatures/{id}/approve
-     * Called from: detail.blade.php - Verify Signature Modal
-     */
     public function approve(Request $request, $id)
     {
         $request->validate([
@@ -164,7 +140,6 @@ class SignatureVerificationController extends Controller
                 'signatureAuthority'
             ])->findOrFail($id);
 
-            // ✅ CHECK: Status harus UPLOADED
             if ($signature->status !== SignatureStatus::UPLOADED) {
                 DB::rollBack();
 
@@ -180,7 +155,7 @@ class SignatureVerificationController extends Controller
             $document = $signature->documentRequest;
             $level = $signature->signature_level;
 
-            // ✅ STEP 1: Mark signature as VERIFIED
+            // Mark signature as verified
             $signature->markAsVerified(Auth::user(), $request->notes);
 
             Log::info('Signature verified', [
@@ -189,9 +164,9 @@ class SignatureVerificationController extends Controller
                 'admin_id' => Auth::id(),
             ]);
 
-            // ✅ STEP 2: Update document current_signature_step
+            // Update current signature step
             $document->update([
-                'current_signature_step' => $level, // ✅ CRITICAL: Update to current level
+                'current_signature_step' => $level,
             ]);
 
             Log::info('Document current_signature_step updated', [
@@ -199,31 +174,34 @@ class SignatureVerificationController extends Controller
                 'current_signature_step' => $level,
             ]);
 
-            // ✅ STEP 3: Fire event untuk notifikasi
+            // 🔥 CRITICAL: Fire event SEBELUM proceed to next level
+            // Listener akan auto-detect jika ini TTD level 3 dan update status
             event(new SignatureVerified($signature, $document, $signature->signatureAuthority, Auth::user()));
 
-            // ✅ STEP 4: Check if this is final level (Level 3)
-            if ($level >= 3) {
-                $document->update([
-                    'status' => DocumentStatus::SIGNATURE_VERIFIED,
-                ]);
+            Log::info('SignatureVerified event fired', [
+                'signature_id' => $id,
+                'level' => $level,
+                'document_id' => $document->id,
+            ]);
 
+            // ✅ Check if this is Level 3 (last signature)
+            if ($level >= 3) {
+                // Listener akan handle update status ke ALL_SIGNATURES_VERIFIED
                 DB::commit();
 
-                Log::info('All signature levels completed', [
+                Log::info('Level 3 signature verified - Listener will handle status update', [
                     'document_id' => $document->id,
                 ]);
 
-                return back()->with('success', '🎉 Semua TTD Level 3 selesai! Dokumen siap untuk finalisasi. Silakan embed TTD ke PDF dan upload dokumen final.');
+                return back()->with('success', '🎉 TTD Level 3 verified! Sistem sedang update status... Refresh halaman untuk melihat tombol finalisasi.');
             }
 
-            // ✅ STEP 5: Auto-trigger next level via Service
+            // Proceed to next level (untuk Level 1 & 2)
             $result = $this->signatureService->proceedToNextLevel($document, $level);
 
             DB::commit();
 
             if (!$result['success']) {
-                // Rollback jika gagal proceed
                 return back()->with('warning', '✅ Level ' . $level . ' verified, tapi gagal proceed ke level berikutnya: ' . $result['message']);
             }
 
@@ -250,12 +228,6 @@ class SignatureVerificationController extends Controller
         }
     }
 
-    /**
-     * ✅ Reject signature
-     *
-     * Route: POST /admin/signatures/{id}/reject
-     * Called from: detail.blade.php - Reject Signature Modal
-     */
     public function reject(Request $request, $id)
     {
         $request->validate([
@@ -270,7 +242,6 @@ class SignatureVerificationController extends Controller
                 'signatureAuthority'
             ])->findOrFail($id);
 
-            // ✅ CHECK: Status harus UPLOADED
             if ($signature->status !== SignatureStatus::UPLOADED) {
                 DB::rollBack();
 
@@ -282,7 +253,6 @@ class SignatureVerificationController extends Controller
                 return back()->with('error', '⚠️ Signature sudah diverifikasi atau tidak dalam status uploaded!');
             }
 
-            // ✅ USE SIGNATURE SERVICE
             $result = $this->signatureService->rejectSignature(
                 $signature,
                 Auth::user(),
@@ -318,9 +288,6 @@ class SignatureVerificationController extends Controller
         }
     }
 
-    /**
-     * Download signature file
-     */
     public function downloadSignature($id)
     {
         try {
@@ -355,10 +322,6 @@ class SignatureVerificationController extends Controller
         }
     }
 
-    /**
-     * 🆕 Get signature data (AJAX)
-     * Returns JSON for preview modal
-     */
     public function getSignatureData($id)
     {
         try {

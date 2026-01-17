@@ -238,7 +238,7 @@
                     @enderror
                 </div>
 
-                <div>
+                <!-- <div>
                     <label for="notes" class="block text-sm font-medium text-gray-700">
                         Catatan Tambahan (Opsional)
                     </label>
@@ -248,7 +248,7 @@
                     @error('notes')
                         <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
                     @enderror
-                </div>
+                </div> -->
 
                 <div class="flex items-center justify-between pt-4 border-t border-gray-200">
                     <a href="{{ route('home') }}" class="text-gray-600 hover:text-gray-900 font-medium inline-flex items-center">

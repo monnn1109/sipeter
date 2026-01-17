@@ -28,7 +28,7 @@ class SignatureAuthoritySeeder extends Seeder
             // LEVEL 2: WAKIL KETUA 3 (KEMAHASISWAAN)
             // ========================================
             [
-                'name' => env('WHATSAPP_WAKIL_KETUA_3_NAME', 'Dr. Firman'),
+                'name' => env('WHATSAPP_WAKIL_KETUA_3_NAME', 'Dr. Firman Solihat, Drs., M.T'),
                 'position' => 'Wakil Ketua 3 - Bidang Kemahasiswaan',
                 'phone' => env('WHATSAPP_WAKIL_KETUA_3_PHONE', '6281563304503'),
                 'email' => 'wakilketua3@staba.ac.id',
@@ -41,7 +41,7 @@ class SignatureAuthoritySeeder extends Seeder
             // LEVEL 3: KETUA/DIREKTUR (FINAL)
             // ========================================
             [
-                'name' => env('WHATSAPP_KETUA_NAME', 'Bu Rani'),
+                'name' => env('WHATSAPP_KETUA_NAME', 'Rani Handriani, S.Si., M.Kes'),
                 'position' => 'Direktur',
                 'phone' => env('WHATSAPP_KETUA_PHONE', '6281317735296'),
                 'email' => 'ketua@staba.ac.id',

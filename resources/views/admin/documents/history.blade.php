@@ -10,7 +10,7 @@
     <div class="bg-white rounded-2xl shadow-lg p-6 mb-6">
         <h3 class="font-bold text-lg mb-4">Filter & Pencarian</h3>
 
-        <form action="{{ route('admin.documents.history') }}" method="GET">
+        <form action="{{ route('admin.history.index') }}" method="GET">
             <div class="grid md:grid-cols-3 lg:grid-cols-5 gap-4 mb-4">
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-2">Jenis Pemohon</label>
@@ -72,7 +72,8 @@
                     </svg>
                     <span>Filter</span>
                 </button>
-                <a href="{{ route('admin.documents.history') }}"
+                {{-- ✅ FIXED: admin.documents.history → admin.history.index --}}
+                <a href="{{ route('admin.history.index') }}"
                    class="bg-gray-200 text-gray-700 px-8 py-3 rounded-xl font-bold hover:bg-gray-300 transition-all flex items-center gap-2">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
@@ -247,7 +248,8 @@
             </svg>
             <h3 class="text-2xl font-bold text-gray-800 mb-2">Tidak Ada Data</h3>
             <p class="text-gray-600 mb-6">Tidak ada riwayat yang sesuai dengan filter yang Anda pilih</p>
-            <a href="{{ route('admin.documents.history') }}"
+            {{-- ✅ FIXED: admin.documents.history → admin.history.index --}}
+            <a href="{{ route('admin.history.index') }}"
                class="inline-block bg-green-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-green-700 transition-all">
                 Reset Filter
             </a>
@@ -259,13 +261,13 @@
 function exportExcel() {
     const params = new URLSearchParams(window.location.search);
     params.set('export', 'excel');
-    alert('Fitur export Excel akan segera tersedia!\n\nURL Export: /admin/documents/export?' + params.toString());
+    alert('Fitur export Excel akan segera tersedia!\n\nURL Export: /admin/history/export?' + params.toString());
 }
 
 function exportPDF() {
     const params = new URLSearchParams(window.location.search);
     params.set('export', 'pdf');
-    alert('Fitur export PDF akan segera tersedia!\n\nURL Export: /admin/documents/export?' + params.toString());
+    alert('Fitur export PDF akan segera tersedia!\n\nURL Export: /admin/history/export?' + params.toString());
 }
 
 @media print {

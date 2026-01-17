@@ -9,6 +9,7 @@ use App\Enums\DeliveryMethod;
 
 @section('content')
 <div class="max-w-7xl mx-auto">
+    {{-- HEADER --}}
     <div class="mb-6 flex items-center justify-between">
         <div>
             <h2 class="text-2xl font-bold text-gray-900">Detail Permohonan</h2>
@@ -39,7 +40,7 @@ use App\Enums\DeliveryMethod;
         </div>
     @endif
 
-    {{-- SECTION: PROGRESS TTD 3-LEVEL (NEW!) --}}
+    {{-- SECTION: PROGRESS TTD 3-LEVEL --}}
     @if($documentRequest->signatures->count() > 0)
         <div class="mb-6 bg-white rounded-lg shadow-lg p-6">
             <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
@@ -56,7 +57,7 @@ use App\Enums\DeliveryMethod;
         </div>
     @endif
 
-    {{-- SECTION: ADMIN ACTIONS UNTUK VERIFIKASI TTD (NEW!) --}}
+    {{-- SECTION: ADMIN ACTIONS UNTUK VERIFIKASI TTD --}}
     @php
         $uploadedSignatures = $documentRequest->signatures()->where('status', 'uploaded')->get();
         $verifiedSignatures = $documentRequest->signatures()->where('status', 'verified')->get();
@@ -153,8 +154,7 @@ use App\Enums\DeliveryMethod;
             </div>
         </div>
     @endif
-
-    {{-- SECTION: DOWNLOAD TTD FILES (NEW!) --}}
+    {{-- SECTION: DOWNLOAD TTD FILES --}}
     @if($verifiedSignatures->count() > 0)
         <div class="mb-6 bg-white rounded-lg shadow-lg p-6">
             <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
@@ -203,7 +203,7 @@ use App\Enums\DeliveryMethod;
                                    target="_blank"
                                    download
                                    class="block w-full px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold rounded transition-colors text-center">
-                                    🔲 Download QR Code
+                                    📲 Download QR Code
                                 </a>
                             @endif
                         </div>
@@ -227,57 +227,64 @@ use App\Enums\DeliveryMethod;
         </div>
     @endif
 
-    {{-- SECTION: UPLOAD DOKUMEN FINAL (NEW!) --}}
+    {{-- 🔥 SECTION: UPLOAD DOKUMEN FINAL (Hanya untuk DOWNLOAD ONLINE, atau PICKUP yang belum upload) --}}
     @if($allSignaturesVerified && !$documentRequest->file_path)
-        <div class="mb-6 bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 rounded-r-lg p-6 shadow-lg">
-            <div class="flex items-start">
-                <svg class="w-8 h-8 text-green-600 mr-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                </svg>
-                <div class="flex-1">
-                    <h3 class="text-xl font-bold text-gray-900 mb-2">
-                        🎉 Semua TTD Sudah Terverifikasi!
-                    </h3>
-                    <p class="text-gray-700 mb-4">
-                        Langkah terakhir: <strong>Embed 3 TTD ke PDF template</strong> secara manual menggunakan Adobe Acrobat / Foxit Reader,
-                        kemudian upload PDF final di bawah ini.
-                    </p>
+        @php
+            $isDownloadMethod = $documentRequest->delivery_method->value === 'download';
+        @endphp
 
-                    <div class="bg-white rounded-lg border border-gray-200 p-5 mb-4">
-                        <h4 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        {{-- Hanya tampilkan section ini untuk DOWNLOAD ONLINE --}}
+        @if($isDownloadMethod)
+            <div class="mb-6 bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 rounded-r-lg p-6 shadow-lg">
+                <div class="flex items-start">
+                    <svg class="w-8 h-8 text-green-600 mr-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <div class="flex-1">
+                        <h3 class="text-xl font-bold text-gray-900 mb-2">
+                            🎉 Semua TTD Sudah Terverifikasi!
+                        </h3>
+                        <p class="text-gray-700 mb-4">
+                            Langkah terakhir: <strong>Embed 3 TTD ke PDF template</strong> secara manual menggunakan Adobe Acrobat / Foxit Reader,
+                            kemudian upload PDF final di bawah ini.
+                        </p>
+
+                        <div class="bg-white rounded-lg border border-gray-200 p-5 mb-4">
+                            <h4 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                                <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                Instruksi Embed TTD Manual:
+                            </h4>
+                            <ol class="list-decimal list-inside space-y-2 text-sm text-gray-700">
+                                <li>Download semua TTD (3 file signature + 3 file QR Code) dari section di atas</li>
+                                <li>Buka PDF template dokumen menggunakan <strong>Adobe Acrobat Pro / Foxit PhantomPDF</strong></li>
+                                <li>Isi data pemohon (Nama, NIM, Keperluan, dll) ke dalam template</li>
+                                <li>Insert/Embed gambar TTD Level 1 (Pa Riko) + QR Code ke kolom TTD Level 1</li>
+                                <li>Insert/Embed gambar TTD Level 2 (Pa Firman) + QR Code ke kolom TTD Level 2</li>
+                                <li>Insert/Embed gambar TTD Level 3 (Bu Rani) + QR Code ke kolom TTD Level 3</li>
+                                <li>Save PDF dengan nama: <code class="bg-gray-100 px-2 py-1 rounded">{{ $documentRequest->request_code }}_Final.pdf</code></li>
+                                <li>Upload PDF final tersebut di form di bawah ini</li>
+                            </ol>
+                        </div>
+
+                        <button onclick="showUploadFinalDocumentModal()"
+                                class="px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg transition-colors flex items-center gap-2 shadow-lg">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
                             </svg>
-                            Instruksi Embed TTD Manual:
-                        </h4>
-                        <ol class="list-decimal list-inside space-y-2 text-sm text-gray-700">
-                            <li>Download semua TTD (3 file signature + 3 file QR Code) dari section di atas</li>
-                            <li>Buka PDF template dokumen menggunakan <strong>Adobe Acrobat Pro / Foxit PhantomPDF</strong></li>
-                            <li>Isi data pemohon (Nama, NIM, Keperluan, dll) ke dalam template</li>
-                            <li>Insert/Embed gambar TTD Level 1 (Pa Riko) + QR Code ke kolom TTD Level 1</li>
-                            <li>Insert/Embed gambar TTD Level 2 (Pa Firman) + QR Code ke kolom TTD Level 2</li>
-                            <li>Insert/Embed gambar TTD Level 3 (Bu Rani) + QR Code ke kolom TTD Level 3</li>
-                            <li>Save PDF dengan nama: <code class="bg-gray-100 px-2 py-1 rounded">{{ $documentRequest->request_code }}_Final.pdf</code></li>
-                            <li>Upload PDF final tersebut di form di bawah ini</li>
-                        </ol>
+                            📤 Upload Dokumen Final (Sudah Ter-embed TTD)
+                        </button>
+                        <p class="text-xs text-gray-600 mt-2">
+                            ⚠️ <strong>Pastikan</strong> PDF sudah ter-embed dengan 3 TTD sebelum upload!
+                        </p>
                     </div>
-
-                    <button onclick="showUploadFinalDocumentModal()"
-                            class="px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg transition-colors flex items-center gap-2 shadow-lg">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
-                        </svg>
-                        📤 Upload Dokumen Final (Sudah Ter-embed TTD)
-                    </button>
-                    <p class="text-xs text-gray-600 mt-2">
-                        ⚠️ <strong>Pastikan</strong> PDF sudah ter-embed dengan 3 TTD sebelum upload!
-                    </p>
                 </div>
             </div>
-        </div>
+        @endif
     @endif
-
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {{-- LEFT COLUMN: Document Info --}}
         <div class="lg:col-span-2 space-y-6">
             <div class="bg-white rounded-lg shadow p-6">
                 <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
@@ -434,186 +441,241 @@ use App\Enums\DeliveryMethod;
             </div>
         </div>
 
-        <div class="lg:col-span-1 space-y-6">
-            <div class="bg-white rounded-lg shadow p-6">
-                <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
-                    <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-                    </svg>
-                    Tindakan
-                </h3>
+        {{-- 🔥 SECTION TINDAKAN - FINAL FIX (No More Loop!) --}}
+        <div class="bg-white rounded-lg shadow p-6">
+            <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                </svg>
+                Tindakan
+            </h3>
 
-                <div class="space-y-3">
-                    @php
-                        $status = $documentRequest->status->value;
-                        $currentStep = $documentRequest->current_verification_step ?? 0;
-                    @endphp
+            <div class="space-y-3">
+                @php
+                    $status = $documentRequest->status->value;
+                    $currentStep = $documentRequest->current_verification_step ?? 0;
+                    $deliveryMethod = $documentRequest->delivery_method->value;
+                    $isPickup = $deliveryMethod === 'pickup';
+                    $isDownload = $deliveryMethod === 'download';
 
-                    @if(in_array($status, ['submitted', 'pending']))
-                        <button onclick="showApproveModal()"
-                                class="w-full px-4 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    // Check all signatures verified
+                    $verifiedSignaturesCount = $documentRequest->signatures()
+                        ->where('status', 'verified')
+                        ->count();
+                    $allSignaturesVerified = $verifiedSignaturesCount === 3;
+
+                    // Check if document has file
+                    $hasFile = $documentRequest->hasFile();
+                @endphp
+
+                {{-- ✅ STATUS: COMPLETED atau PICKED_UP (FINAL STATE - NO MORE ACTIONS!) --}}
+                @if(in_array($status, ['completed', 'picked_up']))
+                    <div class="text-center py-4">
+                        <div class="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-3">
+                            <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                             </svg>
-                            Setujui Dokumen
-                        </button>
-
-                        <button onclick="showRejectModal()"
-                                class="w-full px-4 py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                            </svg>
-                            Tolak Dokumen
-                        </button>
-
-                    @elseif($status === 'approved' && $currentStep === 0)
-                        <a href="{{ route('admin.verifications.send.form', $documentRequest->id) }}"
-                           class="w-full px-4 py-3 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                            </svg>
-                            🚀 Mulai Verifikasi 3-Level
-                        </a>
-                        <p class="text-xs text-center text-gray-500 mt-2">
-                            Dokumen sudah disetujui. Mulai proses verifikasi 3-level.
+                        </div>
+                        <p class="text-sm font-medium text-green-700">🎉 Selesai</p>
+                        <p class="text-xs text-gray-500 mt-1">
+                            @if($isPickup)
+                                Dokumen telah diserahkan kepada pemohon (Pickup Fisik)
+                            @else
+                                Dokumen telah didownload dan dikonfirmasi oleh pemohon
+                            @endif
                         </p>
+                    </div>
 
-                    @elseif(in_array($status, [
-                        'verification_step_1_requested',
-                        'verification_step_2_requested',
-                        'verification_step_3_requested'
-                    ]))
-                        <div class="text-center py-4">
-                            <div class="inline-flex items-center justify-center w-16 h-16 bg-yellow-100 rounded-full mb-3">
-                                <svg class="w-8 h-8 text-yellow-600 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                </svg>
-                            </div>
-                            <p class="text-sm font-medium text-gray-700">⏳ Verifikasi Level {{ $currentStep }} Pending</p>
-                            <p class="text-xs text-gray-500 mt-1">Menunggu approval dari pejabat</p>
+                {{-- ✅ PENDING/SUBMITTED: Approve/Reject --}}
+                @elseif(in_array($status, ['submitted', 'pending']))
+                    <button onclick="showApproveModal()"
+                            class="w-full px-4 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                        Setujui Dokumen
+                    </button>
+
+                    <button onclick="showRejectModal()"
+                            class="w-full px-4 py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                        Tolak Dokumen
+                    </button>
+
+                {{-- ✅ APPROVED: Mulai Verifikasi 3-Level --}}
+                @elseif($status === 'approved' && $currentStep === 0)
+                    <a href="{{ route('admin.verifications.send.form', $documentRequest->id) }}"
+                    class="w-full px-4 py-3 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        🚀 Mulai Verifikasi 3-Level
+                    </a>
+                    <p class="text-xs text-center text-gray-500 mt-2">
+                        Dokumen sudah disetujui. Mulai proses verifikasi 3-level.
+                    </p>
+
+                {{-- ⏳ VERIFICATION IN PROGRESS --}}
+                @elseif(in_array($status, [
+                    'verification_step_1_requested',
+                    'verification_step_2_requested',
+                    'verification_step_3_requested'
+                ]))
+                    <div class="text-center py-4">
+                        <div class="inline-flex items-center justify-center w-16 h-16 bg-yellow-100 rounded-full mb-3">
+                            <svg class="w-8 h-8 text-yellow-600 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
                         </div>
+                        <p class="text-sm font-medium text-gray-700">⏳ Verifikasi Level {{ $currentStep }} Pending</p>
+                        <p class="text-xs text-gray-500 mt-1">Menunggu approval dari pejabat</p>
+                    </div>
 
-                    @elseif($status === 'verification_step_3_approved' || ($currentStep === 3 && $documentRequest->verifications->where('verification_level', 3)->where('status', 'approved')->count() > 0))
-                        @php
-                            // Check apakah sudah ada signature request
-                            $hasSignatureRequest = $documentRequest->signatures()->exists();
-                        @endphp
+                {{-- ✅ ALL VERIFICATION COMPLETED: Request TTD --}}
+                @elseif($status === 'verification_step_3_approved' || ($currentStep === 3 && $documentRequest->verifications->where('verification_level', 3)->where('status', 'approved')->count() > 0))
+                    @php
+                        $hasSignatureRequest = $documentRequest->signatures()->exists();
+                    @endphp
 
-                        @if(!$hasSignatureRequest)
-                            {{-- Belum ada signature request sama sekali --}}
-                            <form action="{{ route('admin.signatures.request', $documentRequest->id) }}" method="POST">
-                                @csrf
-                                <button type="submit"
-                                        class="w-full px-4 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
-                                    </svg>
-                                    ✍️ Request Tanda Tangan Digital
-                                </button>
-                            </form>
-                            <p class="text-xs text-center text-gray-500 mt-2">
-                                🎉 Semua verifikasi selesai! Lanjut ke TTD.
-                            </p>
-                        @else
-                            {{-- Sudah ada signature request - cek statusnya --}}
-                            <div class="text-center py-4">
-                                <div class="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-3">
-                                    <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                    </svg>
-                                </div>
-                                <p class="text-sm font-medium text-gray-700">⏳ Proses Tanda Tangan</p>
-                                <p class="text-xs text-gray-500 mt-1">Menunggu upload/verifikasi TTD</p>
-                            </div>
-                        @endif
-
-                    @elseif($status === 'verification_rejected')
-                        <div class="text-center py-4">
-                            <div class="inline-flex items-center justify-center w-16 h-16 bg-red-100 rounded-full mb-3">
-                                <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                </svg>
-                            </div>
-                            <p class="text-sm font-medium text-red-700">❌ Verifikasi Ditolak</p>
-                            <p class="text-xs text-gray-500 mt-1">Proses dihentikan</p>
-                        </div>
-
-                    @elseif(in_array($status, ['signature_requested', 'waiting_signature', 'signature_in_progress']))
-                        <div class="text-center py-4">
-                            <div class="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-3">
-                                <svg class="w-8 h-8 text-blue-600 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    @if(!$hasSignatureRequest)
+                        <form action="{{ route('admin.signatures.request', $documentRequest->id) }}" method="POST">
+                            @csrf
+                            <button type="submit"
+                                    class="w-full px-4 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
                                 </svg>
-                            </div>
-                            <p class="text-sm font-medium text-gray-700">✍️ Menunggu TTD</p>
-                            <p class="text-xs text-gray-500 mt-1">Link upload sudah dikirim</p>
-                        </div>
-
-                    @elseif(in_array($status, ['signature_uploaded', 'signature_verified']))
-                        @if(($documentRequest->delivery_method === DeliveryMethod::DOWNLOAD->value || $documentRequest->delivery_method === 'download') && !$documentRequest->file_path)
-                            <button onclick="showUploadModal()"
-                                    class="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
-                                </svg>
-                                📤 Upload Dokumen Final (PDF)
+                                ✍️ Request Tanda Tangan Digital
                             </button>
-                            <p class="text-xs text-center text-gray-500 mt-2">
-                                ✅ TTD terverifikasi. Upload PDF final dengan TTD ter-embed.
-                            </p>
-                        @elseif($documentRequest->delivery_method === DeliveryMethod::PICKUP->value || $documentRequest->delivery_method === 'pickup')
-                            <button onclick="showReadyModal()"
-                                    class="w-full px-4 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                </svg>
-                                ✅ Tandai Siap Pickup
-                            </button>
-                            <p class="text-xs text-center text-gray-500 mt-2">
-                                📦 Dokumen fisik siap diambil
-                            </p>
-                        @elseif($documentRequest->file_path)
-                            <button onclick="showReadyModal()"
-                                    class="w-full px-4 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                </svg>
-                                ✅ Tandai Siap Download
-                            </button>
-                            <p class="text-xs text-center text-gray-500 mt-2">
-                                📥 File sudah diupload
-                            </p>
-                        @endif
-
-                    @elseif($status === 'ready_for_pickup')
-                        <button onclick="showPickedUpModal()"
-                                class="w-full px-4 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
-                            </svg>
-                            ✅ Tandai Sudah Diambil
-                        </button>
-
-                    @elseif($status === 'picked_up')
-                        <button onclick="showCompletedModal()"
-                                class="w-full px-4 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                            </svg>
-                            ✅ Tandai Selesai
-                        </button>
-
+                        </form>
+                        <p class="text-xs text-center text-gray-500 mt-2">
+                            🎉 Semua verifikasi selesai! Lanjut ke TTD.
+                        </p>
                     @else
-                        <div class="text-center py-4">
-                            <p class="text-sm text-gray-500">
-                                Tidak ada tindakan untuk status
-                                <span class="font-semibold block mt-1">{{ $documentRequest->status->label() }}</span>
-                            </p>
-                        </div>
-                    @endif
-                </div>
-            </div>
+                        {{-- TTD sudah direquest, cek apakah semua sudah verified --}}
+                        @if($allSignaturesVerified)
+                            {{-- 🔥 PEMBEDA: PICKUP vs DOWNLOAD --}}
+                            @if($isPickup)
+                                {{-- 📦 PICKUP FISIK --}}
+                                @if($status === 'ready_for_pickup')
+                                    {{-- Status READY: Tampilkan button "Tandai Sudah Diambil" --}}
+                                    <button onclick="showPickedUpModal()"
+                                            class="w-full px-4 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
+                                        </svg>
+                                        ✅ Tandai Sudah Diambil
+                                    </button>
+                                    <p class="text-xs text-center text-gray-500 mt-2">
+                                        📦 Verifikasi identitas dan serahkan dokumen fisik
+                                    </p>
+                                @else
+                                    {{-- Belum ready: Tampilkan button "Tandai Siap Diambil" --}}
+                                    <button onclick="showReadyForPickupModal()"
+                                            class="w-full px-4 py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg transition-colors flex items-center justify-center gap-2 shadow-lg">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                        </svg>
+                                        📦 Tandai Dokumen Siap Diambil
+                                    </button>
+                                    <p class="text-xs text-center text-purple-700 font-semibold mt-2 bg-purple-50 p-3 rounded-lg border border-purple-200">
+                                        ✅ Semua TTD verified!<br>
+                                        📥 Download TTD → Embed manual → Klik tombol ini
+                                    </p>
+                                @endif
 
+                            @else
+                                {{-- 📥 DOWNLOAD ONLINE --}}
+                                @if(!$hasFile)
+                                    {{-- Belum upload PDF: Tampilkan button "Upload Final" --}}
+                                    <button onclick="showUploadFinalDocumentModal()"
+                                            class="w-full px-4 py-3 bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white font-bold rounded-lg transition-colors flex items-center justify-center gap-2 shadow-lg">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                                        </svg>
+                                        📤 Upload Dokumen Final (Ter-embed TTD)
+                                    </button>
+                                    <p class="text-xs text-center text-green-700 font-semibold mt-2 bg-green-50 p-3 rounded-lg border border-green-200">
+                                        ✅ Semua TTD verified!<br>
+                                        📥 Download TTD → Embed manual → Upload PDF
+                                    </p>
+                                @else
+                                    {{-- Sudah upload: Menunggu user download --}}
+                                    <div class="text-center py-4">
+                                        <div class="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-3">
+                                            <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                            </svg>
+                                        </div>
+                                        <p class="text-sm font-medium text-green-700">✅ Selesai (Admin)</p>
+                                        <p class="text-xs text-gray-500 mt-1">
+                                            Menunggu user download & konfirmasi
+                                        </p>
+                                    </div>
+                                @endif
+                            @endif
+
+                        @else
+                            {{-- TTD masih dalam proses upload/verify --}}
+                            <div class="text-center py-4">
+                                <div class="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-3">
+                                    <svg class="w-8 h-8 text-blue-600 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+                                    </svg>
+                                </div>
+                                <p class="text-sm font-medium text-gray-700">✍️ Proses Tanda Tangan</p>
+                                <p class="text-xs text-gray-500 mt-1">
+                                    Verified: {{ $verifiedSignaturesCount }}/3 TTD
+                                </p>
+                            </div>
+                        @endif
+                    @endif
+
+                {{-- ❌ VERIFICATION REJECTED --}}
+                @elseif($status === 'verification_rejected')
+                    <div class="text-center py-4">
+                        <div class="inline-flex items-center justify-center w-16 h-16 bg-red-100 rounded-full mb-3">
+                            <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </div>
+                        <p class="text-sm font-medium text-red-700">❌ Verifikasi Ditolak</p>
+                        <p class="text-xs text-gray-500 mt-1">Proses dihentikan</p>
+                    </div>
+
+                {{-- ❌ REJECTED --}}
+                @elseif($status === 'rejected')
+                    <div class="text-center py-4">
+                        <div class="inline-flex items-center justify-center w-16 h-16 bg-red-100 rounded-full mb-3">
+                            <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </div>
+                        <p class="text-sm font-medium text-red-700">❌ Ditolak</p>
+                        <p class="text-xs text-gray-500 mt-1">Dokumen ditolak oleh admin</p>
+                    </div>
+
+                {{-- ⚠️ FALLBACK: Status lainnya --}}
+                @else
+                    <div class="text-center py-4">
+                        <p class="text-sm text-gray-500">
+                            Tidak ada tindakan untuk status
+                            <span class="font-semibold block mt-1">{{ $documentRequest->status->label() }}</span>
+                        </p>
+                        <p class="text-xs text-gray-400 mt-2">
+                            Status: {{ $status }}<br>
+                            TTD Verified: {{ $verifiedSignaturesCount }}/3<br>
+                            Delivery: {{ $deliveryMethod }}<br>
+                            Has File: {{ $hasFile ? 'Yes' : 'No' }}
+                        </p>
+                    </div>
+                @endif
+            </div>
+        </div>
+
+            {{-- RIWAYAT AKTIVITAS --}}
             <div class="bg-white rounded-lg shadow p-6">
                 <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
                     <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -630,7 +692,6 @@ use App\Enums\DeliveryMethod;
         </div>
     </div>
 </div>
-
 {{-- MODAL: Approve Document --}}
 <div id="approveModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50" onclick="if(event.target === this) hideApproveModal()">
     <div class="relative top-20 mx-auto p-6 border w-full max-w-md shadow-lg rounded-xl bg-white">
@@ -686,12 +747,29 @@ use App\Enums\DeliveryMethod;
     </div>
 </div>
 
-{{-- MODAL: Upload Final Document (NEW!) --}}
+{{-- MODAL: Upload Final Document --}}
 <div id="uploadFinalDocumentModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50" onclick="if(event.target === this) hideUploadFinalDocumentModal()">
     <div class="relative top-20 mx-auto p-6 border w-full max-w-lg shadow-lg rounded-xl bg-white">
-        <h3 class="text-xl font-bold mb-4 text-gray-900">📤 Upload Dokumen Final</h3>
-        <p class="text-gray-600 mb-4">Upload PDF yang sudah ter-embed dengan 3 TTD (Level 1, 2, dan 3).</p>
-        <form action="{{ route('admin.upload.submit', $documentRequest->id) }}" method="POST" enctype="multipart/form-data">
+        <h3 class="text-xl font-bold mb-4 text-gray-900 flex items-center gap-2">
+            <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+            </svg>
+            Upload Dokumen Final (Ter-embed 3 TTD)
+        </h3>
+
+        <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+            <p class="text-sm text-green-800 mb-2">
+                <strong>✅ Semua TTD Verified!</strong>
+            </p>
+            <p class="text-xs text-green-700">
+                Upload PDF yang sudah ter-embed dengan:<br>
+                • TTD Level 1: Ketua Akademik<br>
+                • TTD Level 2: Wakil Direktur 3<br>
+                • TTD Level 3: Direktur
+            </p>
+        </div>
+
+        <form action="{{ route('admin.upload.submit-final', $documentRequest->id) }}" method="POST" enctype="multipart/form-data">
             @csrf
             <div class="mb-4">
                 <label class="block text-sm font-medium text-gray-700 mb-2">
@@ -705,7 +783,7 @@ use App\Enums\DeliveryMethod;
                 <label class="block text-sm font-medium text-gray-700 mb-2">Catatan (Opsional)</label>
                 <textarea name="notes" rows="3"
                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                          placeholder="Tambahkan catatan..."></textarea>
+                          placeholder="Tambahkan catatan jika diperlukan..."></textarea>
             </div>
             <div class="flex gap-3 justify-end">
                 <button type="button" onclick="hideUploadFinalDocumentModal()"
@@ -713,15 +791,18 @@ use App\Enums\DeliveryMethod;
                     Batal
                 </button>
                 <button type="submit"
-                        class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors">
-                    Upload Dokumen
+                        class="px-5 py-2.5 bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white font-bold rounded-lg transition-colors flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                    </svg>
+                    Upload Dokumen Final
                 </button>
             </div>
         </form>
     </div>
 </div>
 
-{{-- MODAL: Verify Signature (NEW!) --}}
+{{-- MODAL: Verify Signature --}}
 <div id="verifySignatureModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50" onclick="if(event.target === this) hideVerifySignatureModal()">
     <div class="relative top-20 mx-auto p-6 border w-full max-w-md shadow-lg rounded-xl bg-white">
         <h3 class="text-xl font-bold mb-4 text-gray-900">✅ Verifikasi TTD</h3>
@@ -748,7 +829,7 @@ use App\Enums\DeliveryMethod;
     </div>
 </div>
 
-{{-- MODAL: Reject Signature (NEW!) --}}
+{{-- MODAL: Reject Signature --}}
 <div id="rejectSignatureModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50" onclick="if(event.target === this) hideRejectSignatureModal()">
     <div class="relative top-20 mx-auto p-6 border w-full max-w-md shadow-lg rounded-xl bg-white">
         <h3 class="text-xl font-bold mb-4 text-gray-900">❌ Tolak TTD</h3>
@@ -777,17 +858,13 @@ use App\Enums\DeliveryMethod;
     </div>
 </div>
 
-{{-- Include existing upload modal --}}
-@include('admin.documents.upload-modal', ['documentRequest' => $documentRequest])
-
-{{-- MODAL: Ready for Pickup --}}
-<div id="readyModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50" onclick="if(event.target === this) hideReadyModal()">
+{{-- 🔥 MODAL: Ready for Pickup (MANUAL - untuk PICKUP FISIK) --}}
+<div id="readyForPickupModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50" onclick="if(event.target === this) hideReadyForPickupModal()">
     <div class="relative top-20 mx-auto p-6 border w-full max-w-md shadow-lg rounded-xl bg-white">
-        <h3 class="text-xl font-bold mb-4 text-gray-900">Tandai Siap Diambil</h3>
-        <p class="text-gray-600 mb-6">Dokumen akan ditandai sebagai "Siap Diambil" dan pemohon akan menerima notifikasi.</p>
-        <form action="{{ route('admin.documents.update-status', $documentRequest->id) }}" method="POST">
+        <h3 class="text-xl font-bold mb-4 text-gray-900">📦 Tandai Siap Diambil</h3>
+        <p class="text-gray-600 mb-6">Dokumen akan ditandai sebagai "Siap Diambil" dan pemohon akan menerima notifikasi WA.</p>
+        <form action="{{ route('admin.documents.mark-ready-pickup', $documentRequest->id) }}" method="POST">
             @csrf
-            <input type="hidden" name="status" value="ready_for_pickup">
             <div class="mb-4">
                 <label class="block text-sm font-medium text-gray-700 mb-2">Catatan (Opsional)</label>
                 <textarea name="notes" rows="3"
@@ -795,40 +872,85 @@ use App\Enums\DeliveryMethod;
                           placeholder="Tambahkan catatan..."></textarea>
             </div>
             <div class="flex gap-3 justify-end">
-                <button type="button" onclick="hideReadyModal()"
+                <button type="button" onclick="hideReadyForPickupModal()"
                         class="px-5 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold rounded-lg transition-colors">
                     Batal
                 </button>
                 <button type="submit"
                         class="px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg transition-colors">
-                    Ya, Tandai Siap
+                    Ya, Tandai Siap Diambil
                 </button>
             </div>
         </form>
     </div>
 </div>
 
-{{-- MODAL: Picked Up --}}
+{{-- MODAL: Picked Up (untuk PICKUP FISIK) --}}
 <div id="pickedUpModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50" onclick="if(event.target === this) hidePickedUpModal()">
-    <div class="relative top-20 mx-auto p-6 border w-full max-w-md shadow-lg rounded-xl bg-white">
-        <h3 class="text-xl font-bold mb-4 text-gray-900">Tandai Sudah Diambil</h3>
-        <p class="text-gray-600 mb-6">Konfirmasi bahwa dokumen telah diambil oleh pemohon.</p>
-        <form action="{{ route('admin.documents.update-status', $documentRequest->id) }}" method="POST">
+    <div class="relative top-20 mx-auto p-6 border w-full max-w-lg shadow-lg rounded-xl bg-white">
+        <h3 class="text-xl font-bold mb-4 text-gray-900 flex items-center gap-2">
+            <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
+            </svg>
+            Tandai Sudah Diambil (Pickup Fisik)
+        </h3>
+
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+            <p class="text-sm text-blue-800">
+                <strong>ℹ️ Instruksi:</strong> Verifikasi identitas mahasiswa (KTP/KTM/SIM) sebelum menyerahkan dokumen fisik.
+            </p>
+        </div>
+
+        <form action="{{ route('admin.documents.mark-picked-up', $documentRequest->id) }}" method="POST">
             @csrf
-            <input type="hidden" name="status" value="picked_up">
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Jenis Identitas <span class="text-red-500">*</span>
+                </label>
+                <select name="verification_id_type" required
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                    <option value="">Pilih Jenis Identitas</option>
+                    <option value="KTP">KTP</option>
+                    <option value="KTM">KTM (Kartu Mahasiswa)</option>
+                    <option value="SIM">SIM</option>
+                </select>
+            </div>
+
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Nomor Identitas <span class="text-red-500">*</span>
+                </label>
+                <input type="text" name="verification_id_number" required
+                       placeholder="Contoh: 3201234567890123"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+
             <div class="mb-4">
                 <label class="block text-sm font-medium text-gray-700 mb-2">Catatan (Opsional)</label>
                 <textarea name="notes" rows="3"
-                          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                          placeholder="Tambahkan catatan..."></textarea>
+                          placeholder="Tambahkan catatan jika diperlukan..."
+                          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"></textarea>
             </div>
+
+            <div class="bg-gray-50 rounded-lg p-4 mb-4">
+                <p class="text-xs text-gray-600 mb-2 font-semibold">Info Pemohon:</p>
+                <div class="space-y-1 text-sm">
+                    <p><strong>Nama:</strong> {{ $documentRequest->applicant_name }}</p>
+                    <p><strong>NIM/NIP:</strong> {{ $documentRequest->applicant_identifier }}</p>
+                    <p><strong>WhatsApp:</strong> {{ $documentRequest->applicant_phone }}</p>
+                </div>
+            </div>
+
             <div class="flex gap-3 justify-end">
                 <button type="button" onclick="hidePickedUpModal()"
                         class="px-5 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold rounded-lg transition-colors">
                     Batal
                 </button>
                 <button type="submit"
-                        class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg transition-colors">
+                        class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg transition-colors flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
                     Ya, Sudah Diambil
                 </button>
             </div>
@@ -864,9 +986,12 @@ use App\Enums\DeliveryMethod;
     </div>
 </div>
 
+{{-- Include existing upload modal --}}
+@include('admin.documents.upload-modal', ['documentRequest' => $documentRequest])
+
 @push('scripts')
 <script>
-    // Existing modal functions
+    // Modal functions
     function showApproveModal() { document.getElementById('approveModal').classList.remove('hidden'); }
     function hideApproveModal() { document.getElementById('approveModal').classList.add('hidden'); }
 
@@ -876,8 +1001,11 @@ use App\Enums\DeliveryMethod;
     function showUploadModal() { document.getElementById('uploadModal').classList.remove('hidden'); }
     function hideUploadModal() { document.getElementById('uploadModal').classList.add('hidden'); }
 
-    function showReadyModal() { document.getElementById('readyModal').classList.remove('hidden'); }
-    function hideReadyModal() { document.getElementById('readyModal').classList.add('hidden'); }
+    function showUploadFinalDocumentModal() { document.getElementById('uploadFinalDocumentModal').classList.remove('hidden'); }
+    function hideUploadFinalDocumentModal() { document.getElementById('uploadFinalDocumentModal').classList.add('hidden'); }
+
+    function showReadyForPickupModal() { document.getElementById('readyForPickupModal').classList.remove('hidden'); }
+    function hideReadyForPickupModal() { document.getElementById('readyForPickupModal').classList.add('hidden'); }
 
     function showPickedUpModal() { document.getElementById('pickedUpModal').classList.remove('hidden'); }
     function hidePickedUpModal() { document.getElementById('pickedUpModal').classList.add('hidden'); }
@@ -885,15 +1013,7 @@ use App\Enums\DeliveryMethod;
     function showCompletedModal() { document.getElementById('completedModal').classList.remove('hidden'); }
     function hideCompletedModal() { document.getElementById('completedModal').classList.add('hidden'); }
 
-    // NEW: Upload Final Document Modal
-    function showUploadFinalDocumentModal() {
-        document.getElementById('uploadFinalDocumentModal').classList.remove('hidden');
-    }
-    function hideUploadFinalDocumentModal() {
-        document.getElementById('uploadFinalDocumentModal').classList.add('hidden');
-    }
-
-    // NEW: Toggle Inline Preview
+    // Signature modals
     function toggleSignaturePreview(signatureId) {
         const previewDiv = document.getElementById('preview-' + signatureId);
         if (previewDiv.classList.contains('hidden')) {
@@ -903,7 +1023,6 @@ use App\Enums\DeliveryMethod;
         }
     }
 
-    // NEW: Verify Signature Modal
     function showVerifySignatureModal(signatureId, level) {
         const modal = document.getElementById('verifySignatureModal');
         const form = document.getElementById('verifySignatureForm');
@@ -918,7 +1037,6 @@ use App\Enums\DeliveryMethod;
         document.getElementById('verifySignatureModal').classList.add('hidden');
     }
 
-    // NEW: Reject Signature Modal
     function showRejectSignatureModal(signatureId, level) {
         const modal = document.getElementById('rejectSignatureModal');
         const form = document.getElementById('rejectSignatureForm');
@@ -933,21 +1051,16 @@ use App\Enums\DeliveryMethod;
         document.getElementById('rejectSignatureModal').classList.add('hidden');
     }
 
-    // NEW: Preview Signature (open in new tab)
-    function previewSignature(signatureId) {
-        window.open(`/admin/signatures/${signatureId}/preview`, '_blank');
-    }
-
     // Close modals on ESC key
     document.addEventListener('keydown', function(event) {
         if (event.key === 'Escape') {
             hideApproveModal();
             hideRejectModal();
             hideUploadModal();
-            hideReadyModal();
+            hideUploadFinalDocumentModal();
+            hideReadyForPickupModal();
             hidePickedUpModal();
             hideCompletedModal();
-            hideUploadFinalDocumentModal();
             hideVerifySignatureModal();
             hideRejectSignatureModal();
         }

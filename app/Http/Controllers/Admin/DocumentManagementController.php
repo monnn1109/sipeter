@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\DocumentRequest;
+use App\Enums\DeliveryMethod;
 use App\Services\{
     DocumentHistoryService,
     NotificationService,
@@ -12,7 +13,8 @@ use App\Services\{
 use App\Events\{
     DocumentRequestApproved,
     DocumentRequestRejected,
-    DocumentReadyForPickup
+    DocumentReadyForPickup,
+    DocumentPickedUp
 };
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\{Storage, DB, Log};
@@ -107,10 +109,21 @@ class DocumentManagementController extends Controller
 
         try {
             $documentRequest = DocumentRequest::findOrFail($id);
+            $approvableStatuses = ['submitted', 'pending'];
 
-            if (!in_array($documentRequest->status->value, ['submitted', 'pending'])) {
-                return back()->with('error', 'Dokumen sudah diproses sebelumnya');
+            if (!in_array($documentRequest->status->value, $approvableStatuses)) {
+                $message = match($documentRequest->status->value) {
+                    'approved' => 'Dokumen sudah disetujui sebelumnya.',
+                    'rejected' => 'Dokumen sudah ditolak, tidak dapat disetujui.',
+                    'verification_rejected' => 'Dokumen ditolak di tahap verifikasi, tidak dapat disetujui.',
+                    'completed' => 'Dokumen sudah selesai diproses.',
+                    default => 'Dokumen sudah diproses sebelumnya.'
+                };
+
+                return back()->with('error', $message);
             }
+
+            $oldStatus = $documentRequest->status->value;
 
             DB::beginTransaction();
 
@@ -125,20 +138,29 @@ class DocumentManagementController extends Controller
 
             $this->historyService->logStatusChange(
                 $documentRequest,
-                'pending',
+                $oldStatus,
                 'approved',
-                'Dokumen disetujui oleh admin'
+                'Dokumen disetujui oleh admin' . ($request->admin_notes ? '. Catatan: ' . $request->admin_notes : '')
             );
 
             DB::commit();
 
-            return back()->with('success', 'Pengajuan berhasil disetujui! Silakan lanjutkan dengan Request Verifikasi 3 Level.');
+            Log::info('Admin approved document', [
+                'document_id' => $documentRequest->id,
+                'request_code' => $documentRequest->request_code,
+                'old_status' => $oldStatus,
+                'admin_id' => auth()->id(),
+                'admin_name' => auth()->user()->name,
+            ]);
+
+            return back()->with('success', '✅ Pengajuan berhasil disetujui! Silakan lanjutkan dengan Request Verifikasi 3 Level.');
 
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Approve document failed', [
                 'document_id' => $id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
             ]);
             return back()->with('error', 'Gagal menyetujui dokumen: ' . $e->getMessage());
         }
@@ -153,23 +175,63 @@ class DocumentManagementController extends Controller
         try {
             $documentRequest = DocumentRequest::findOrFail($id);
 
-            if ($documentRequest->status->value !== 'pending') {
-                return back()->with('error', 'Dokumen sudah diproses sebelumnya');
+            $rejectableStatuses = [
+                'submitted',
+                'pending',
+                'approved',
+                'verification_step_1_requested',
+                'verification_step_1_approved',
+                'verification_step_2_requested',
+                'verification_step_2_approved',
+                'verification_step_3_requested',
+                'verification_step_3_approved',
+                'processing',
+                'waiting_signature',
+                'signature_in_progress',
+            ];
+
+            if (!in_array($documentRequest->status->value, $rejectableStatuses)) {
+                $nonRejectableMessage = match($documentRequest->status->value) {
+                    'rejected' => 'Dokumen sudah ditolak sebelumnya.',
+                    'verification_rejected' => 'Dokumen sudah ditolak di tahap verifikasi.',
+                    'completed' => 'Dokumen sudah selesai diproses.',
+                    'ready_for_pickup' => 'Dokumen sudah siap diambil, tidak dapat ditolak.',
+                    'picked_up' => 'Dokumen sudah diambil, tidak dapat ditolak.',
+                    default => 'Dokumen tidak dapat ditolak pada status ini.'
+                };
+
+                return back()->with('error', $nonRejectableMessage);
             }
+
+            $oldStatus = $documentRequest->status->value;
 
             DB::beginTransaction();
 
             $documentRequest->update([
                 'status' => 'rejected',
                 'rejection_reason' => $request->rejection_reason,
-                'approved_by' => auth()->id(),
+                'rejected_at' => now(),
             ]);
 
             event(new DocumentRequestRejected($documentRequest));
 
+            $this->historyService->logStatusChange(
+                $documentRequest,
+                $oldStatus,
+                'rejected',
+                'Dokumen ditolak: ' . $request->rejection_reason
+            );
+
             DB::commit();
 
-            return back()->with('success', 'Pengajuan berhasil ditolak.');
+            Log::info('Admin rejected document', [
+                'document_id' => $documentRequest->id,
+                'request_code' => $documentRequest->request_code,
+                'reason' => $request->rejection_reason,
+                'admin_id' => auth()->id(),
+            ]);
+
+            return back()->with('success', 'Dokumen berhasil ditolak. Notifikasi sudah dikirim ke pemohon.');
 
         } catch (\Exception $e) {
             DB::rollBack();
@@ -181,10 +243,219 @@ class DocumentManagementController extends Controller
         }
     }
 
+    public function markAsReadyForPickup(Request $request, $id)
+    {
+        $request->validate([
+            'notes' => 'nullable|string|max:500'
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $document = DocumentRequest::with('signatures')->findOrFail($id);
+
+            // ✅ CHECK 1: Harus PICKUP fisik
+            if ($document->delivery_method->value !== 'pickup') {
+                DB::rollBack();
+                return back()->with('error', '❌ Tindakan ini hanya untuk metode Pickup Fisik! Dokumen ini menggunakan metode: ' . ucfirst($document->delivery_method->value));
+            }
+
+            // ✅ CHECK 2: Semua TTD harus verified (Level 1, 2, 3)
+            $verifiedSignatures = $document->signatures()
+                ->where('status', 'verified')
+                ->count();
+
+            if ($verifiedSignatures < 3) {
+                DB::rollBack();
+                return back()->with('error', '❌ Belum semua TTD diverifikasi! Verified: ' . $verifiedSignatures . '/3. Pastikan semua TTD sudah diverifikasi sebelum menandai "Siap Diambil".');
+            }
+
+            // ✅ CHECK 3: Jangan tandai 2x (sudah ready_for_pickup atau lebih)
+            if (in_array($document->status->value, ['ready_for_pickup', 'picked_up', 'completed'])) {
+                DB::rollBack();
+                return back()->with('error', '⚠️ Dokumen sudah ditandai "Siap Diambil" sebelumnya! Status saat ini: ' . $document->status->label());
+            }
+
+            // ✅ UPDATE: Status ke READY_FOR_PICKUP
+            $oldStatus = $document->status->value;
+
+            $document->update([
+                'status' => 'ready_for_pickup',
+                'ready_at' => now(),
+                'admin_notes' => $request->notes ?? 'Dokumen siap diambil di Tata Usaha',
+            ]);
+
+            $this->historyService->logStatusChange(
+                $document,
+                $oldStatus,
+                'ready_for_pickup',
+                '📋 Admin menandai dokumen "Siap Diambil" (Pickup Fisik)' . ($request->notes ? '. Catatan: ' . $request->notes : '')
+            );
+
+            Log::info('Document marked as ready for pickup', [
+                'document_id' => $id,
+                'request_code' => $document->request_code,
+                'old_status' => $oldStatus,
+                'delivery_method' => 'pickup',
+                'admin_id' => auth()->id(),
+                'admin_name' => auth()->user()->name,
+            ]);
+
+            event(new DocumentReadyForPickup($document));
+
+            DB::commit();
+
+            return redirect()
+                ->route('admin.documents.show', $document->id)
+                ->with('success', '✅ Dokumen ditandai "Siap Diambil"! Notifikasi WA sudah dikirim ke pemohon untuk mengambil dokumen di Tata Usaha.');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            Log::error('Mark as ready for pickup failed', [
+                'document_id' => $id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return back()
+                ->with('error', '❌ Gagal menandai dokumen siap diambil: ' . $e->getMessage());
+        }
+    }
+
+public function markAsPickedUp(Request $request, $id)
+{
+    $request->validate([
+        'notes' => 'nullable|string|max:500'
+    ]);
+
+    try {
+        DB::beginTransaction();
+
+        $document = DocumentRequest::findOrFail($id);
+
+        // ✅ FIX: Convert Enum to value
+        if ($document->delivery_method->value !== 'pickup') {
+            DB::rollBack();
+            return back()->with('error', '❌ Tindakan ini hanya untuk metode Pickup Fisik! Dokumen ini menggunakan metode: ' . ucfirst($document->delivery_method->value));
+        }
+
+        if ($document->status->value !== 'ready_for_pickup') {
+            DB::rollBack();
+            return back()->with('error', '❌ Dokumen belum siap diambil! Status saat ini: ' . $document->status->label() . '. Pastikan dokumen sudah ditandai "Siap Diambil" terlebih dahulu.');
+        }
+
+        $oldStatus = $document->status->value;
+
+        $document->update([
+            'status' => 'completed',
+            'picked_up_at' => now(),
+            'marked_by_role' => 'admin',
+            'admin_notes' => $request->notes ?? 'Dokumen telah diserahkan kepada pemohon',
+        ]);
+
+        $this->historyService->logDocumentPickedUp($document, $request->notes);
+
+        Log::info('Document marked as picked up', [
+            'document_id' => $id,
+            'request_code' => $document->request_code,
+            'old_status' => $oldStatus,
+            'delivery_method' => 'pickup',
+            'admin_id' => auth()->id(),
+            'admin_name' => auth()->user()->name,
+        ]);
+
+        event(new DocumentPickedUp($document));
+
+        DB::commit();
+
+        return redirect()
+            ->route('admin.documents.show', $document->id)
+            ->with('success', '✅ Dokumen ditandai "Sudah Diambil"! Status: COMPLETED. Notifikasi konfirmasi sudah dikirim ke pemohon.');
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+
+        Log::error('Mark as picked up failed', [
+            'document_id' => $id,
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+
+        return back()
+            ->with('error', '❌ Gagal menandai dokumen sudah diambil: ' . $e->getMessage());
+    }
+}
+
+    // public function markAsPickedUp(Request $request, $id)
+    // {
+    //     $request->validate([
+    //         'notes' => 'nullable|string|max:500'
+    //     ]);
+
+    //     try {
+    //         DB::beginTransaction();
+
+    //         $document = DocumentRequest::findOrFail($id);
+
+    //         // ✅ FIX: Use Enum comparison instead of string
+    //         if ($document->delivery_method !== DeliveryMethod::PICKUP) {
+    //             DB::rollBack();
+    //             // ✅ FIX: Use label() method instead of ucfirst()
+    //             return back()->with('error', '❌ Tindakan ini hanya untuk metode Pickup Fisik! Dokumen ini menggunakan metode: ' . $document->delivery_method->label());
+    //         }
+
+    //         if ($document->status->value !== 'ready_for_pickup') {
+    //             DB::rollBack();
+    //             return back()->with('error', '❌ Dokumen belum siap diambil! Status saat ini: ' . $document->status->label() . '. Pastikan dokumen sudah ditandai "Siap Diambil" terlebih dahulu.');
+    //         }
+
+    //         $oldStatus = $document->status->value;
+
+    //         $document->update([
+    //             'status' => 'completed',
+    //             'picked_up_at' => now(),
+    //             'marked_by_role' => 'admin',
+    //             'admin_notes' => $request->notes ?? 'Dokumen telah diserahkan kepada pemohon',
+    //         ]);
+
+    //         $this->historyService->logDocumentPickedUp($document, $request->notes);
+
+    //         Log::info('Document marked as picked up', [
+    //             'document_id' => $id,
+    //             'request_code' => $document->request_code,
+    //             'old_status' => $oldStatus,
+    //             'delivery_method' => 'pickup',
+    //             'admin_id' => auth()->id(),
+    //             'admin_name' => auth()->user()->name,
+    //         ]);
+
+    //         event(new DocumentPickedUp($document));
+
+    //         DB::commit();
+
+    //         return redirect()
+    //             ->route('admin.documents.show', $document->id)
+    //             ->with('success', '✅ Dokumen ditandai "Sudah Diambil"! Status: COMPLETED. Notifikasi konfirmasi sudah dikirim ke pemohon.');
+
+    //     } catch (\Exception $e) {
+    //         DB::rollBack();
+
+    //         Log::error('Mark as picked up failed', [
+    //             'document_id' => $id,
+    //             'error' => $e->getMessage(),
+    //             'trace' => $e->getTraceAsString()
+    //         ]);
+
+    //         return back()
+    //             ->with('error', '❌ Gagal menandai dokumen sudah diambil: ' . $e->getMessage());
+    //     }
+    // }
+
     public function updateStatus(Request $request, $id)
     {
         $request->validate([
-            'status' => 'required|string|in:processing,ready_for_pickup,picked_up,completed',
+            'status' => 'required|string|in:pending,approved,rejected,processing,ready_for_pickup,picked_up,completed',
             'notes' => 'nullable|string|max:500'
         ]);
 
@@ -193,41 +464,35 @@ class DocumentManagementController extends Controller
             $oldStatus = $documentRequest->status->value;
             $newStatus = $request->status;
 
+            if ($oldStatus === $newStatus) {
+                return back()->with('info', 'Status tidak berubah.');
+            }
+
             DB::beginTransaction();
 
-            $updateData = ['status' => $newStatus];
+            $documentRequest->update([
+                'status' => $newStatus,
+                'admin_notes' => $request->notes,
+            ]);
 
-            switch ($newStatus) {
-                case 'ready_for_pickup':
-                    $updateData['ready_at'] = now();
-                    break;
-                case 'picked_up':
-                    $updateData['picked_up_at'] = now();
-                    break;
-                case 'completed':
-                    $updateData['completed_at'] = now();
-                    break;
-            }
-
-            $documentRequest->update($updateData);
-
-            if ($newStatus === 'ready_for_pickup') {
-                event(new DocumentReadyForPickup($documentRequest));
-            }
-
-            $this->historyService->logStatusChange($documentRequest, $oldStatus, $newStatus, $request->notes);
+            $this->historyService->logStatusChange(
+                $documentRequest,
+                $oldStatus,
+                $newStatus,
+                $request->notes ?? "Status diubah dari {$oldStatus} menjadi {$newStatus}"
+            );
 
             DB::commit();
 
-            $statusLabels = [
-                'ready_for_pickup' => 'Siap Diambil',
-                'picked_up' => 'Sudah Diambil',
-                'completed' => 'Selesai'
-            ];
+            Log::info('Document status updated', [
+                'document_id' => $documentRequest->id,
+                'request_code' => $documentRequest->request_code,
+                'old_status' => $oldStatus,
+                'new_status' => $newStatus,
+                'admin_id' => auth()->id(),
+            ]);
 
-            $message = 'Status berhasil diubah menjadi: ' . ($statusLabels[$newStatus] ?? $newStatus);
-
-            return back()->with('success', $message);
+            return back()->with('success', 'Status dokumen berhasil diubah menjadi: ' . $newStatus);
 
         } catch (\Exception $e) {
             DB::rollBack();
@@ -247,13 +512,6 @@ class DocumentManagementController extends Controller
 
         try {
             $documentRequest = DocumentRequest::findOrFail($id);
-
-            $currentNotes = $documentRequest->admin_notes ?? '';
-            $newNote = "\n\n[" . now()->format('d/m/Y H:i') . " - " . auth()->user()->name . "]\n" . $request->notes;
-
-            $documentRequest->update([
-                'admin_notes' => $currentNotes . $newNote
-            ]);
 
             $documentRequest->activities()->create([
                 'user_id' => auth()->id(),

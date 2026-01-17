@@ -58,9 +58,6 @@ class TrackingController extends Controller
             ]);
         }
 
-        // ✅ REMOVED: Auto-redirect logic yang bikin langsung ke detail
-        // ✅ SEKARANG: Selalu tampilkan list hasil pencarian, biar user pilih sendiri
-
         return view('guest.tracking', [
             'documents' => $documents,
             'search' => $search,
@@ -71,10 +68,9 @@ class TrackingController extends Controller
 
     public function show($code)
     {
-        // ✅ FIXED: Ganti 'activities.performedBy' jadi 'activities.user'
         $documentRequest = DocumentRequest::with([
                 'documentType',
-                'activities.user',  // ✅ FIXED: Dari performedBy → user
+                'activities.user',  
                 'verifications',
                 'verifications.authority',
                 'signatures.authority'

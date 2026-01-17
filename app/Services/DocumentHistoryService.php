@@ -180,6 +180,28 @@ class DocumentHistoryService
         );
     }
 
+    /**
+     * 📦 NEW: Log Dokumen Pickup Fisik Ditandai "Sudah Diambil" oleh Admin
+     */
+    public function logDocumentPickedUp(DocumentRequest $documentRequest, ?string $notes = null): DocumentActivity
+    {
+        return $this->log(
+            $documentRequest,
+            DocumentActivityType::PICKED_UP,
+            '📦 Dokumen pickup fisik ditandai "Sudah Diambil" oleh admin',
+            [
+                'pickup_date' => now()->toDateString(),
+                'pickup_time' => now()->format('H:i'),
+                'marked_by' => Auth::user()->name ?? 'Admin',
+                'marked_by_id' => Auth::id(),
+                'delivery_method' => 'pickup',
+                'notes' => $notes,
+            ],
+            'ready_for_pickup',
+            'completed'
+        );
+    }
+
     public function logCompleted(DocumentRequest $documentRequest): DocumentActivity
     {
         return $this->log(
@@ -410,7 +432,7 @@ class DocumentHistoryService
     public function logVerificationApproved(
         DocumentRequest $documentRequest,
         SignatureAuthority $authority,
-        int $level = 1 // 🔥 ADDED
+        int $level = 1 
     ): DocumentActivity {
         return $this->log(
             $documentRequest,
@@ -432,7 +454,7 @@ class DocumentHistoryService
         DocumentRequest $documentRequest,
         SignatureAuthority $authority,
         string $reason,
-        int $level = 1 // 🔥 ADDED
+        int $level = 1
     ): DocumentActivity {
         return $this->log(
             $documentRequest,

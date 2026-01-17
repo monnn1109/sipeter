@@ -72,7 +72,6 @@ class VerificationController extends Controller
 
         try {
             if ($validated['decision'] === 'approved') {
-                // ✅ FIXED: Hanya 2 parameter (verification, notes)
                 $this->verificationService->approveLevel(
                     $verification,
                     $validated['notes'] ?? null
@@ -97,7 +96,6 @@ class VerificationController extends Controller
                 ]);
 
             } else {
-                // ✅ FIXED: Hanya 2 parameter (verification, reason)
                 $this->verificationService->rejectLevel(
                     $verification,
                     $validated['notes']

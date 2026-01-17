@@ -138,6 +138,7 @@ class DocumentVerificationService
 
     /**
      * ✅ CRITICAL: Reject a verification level
+     * 🔥 FIXED: Removed $verification->authority from event (causes TypeError)
      * Stops the entire verification process
      */
     public function rejectLevel(DocumentVerification $verification, string $reason): void
@@ -175,13 +176,10 @@ class DocumentVerificationService
             'reason' => $reason,
         ]);
 
-        event(new DocumentVerificationRejected($document, $verification->authority, $reason));
+        // 🔥 FIXED: Removed $verification->authority parameter (listener will get it via $verification->authority)
+        event(new DocumentVerificationRejected($document, $verification, $reason));
     }
 
-    /**
-     * ✅ Auto-proceed to next level (called ONLY by Listener after approval)
-     * 🔥 FIXED: Added proper logging and error handling
-     */
     public function proceedToNextLevel(DocumentRequest $document): void
     {
         $currentLevel = $document->getCurrentVerificationLevel();

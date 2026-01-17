@@ -1,12 +1,49 @@
 @props(['status', 'size' => 'md'])
 
 @php
-    $statusValue = is_string($status) ? $status : (is_object($status) ? $status->value : 'pending');
+    use App\Enums\DocumentStatus;
 
+    // 🔥 FIX: Robust status handling with null/empty check
+    $statusValue = 'pending'; // Default fallback
+    $isValidStatus = false;
+
+    try {
+        if (empty($status)) {
+            // Handle null, empty string, or false
+            $statusValue = 'pending';
+        } elseif (is_string($status)) {
+            // String value - validate it exists in enum
+            if (!empty(trim($status))) {
+                // Try to create enum from string to validate
+                $testEnum = DocumentStatus::tryFrom($status);
+                $statusValue = $testEnum ? $testEnum->value : 'pending';
+                $isValidStatus = (bool) $testEnum;
+            }
+        } elseif (is_object($status) && $status instanceof DocumentStatus) {
+            // Already an enum object
+            $statusValue = $status->value;
+            $isValidStatus = true;
+        } elseif (is_object($status) && isset($status->value)) {
+            // Object with value property
+            $statusValue = $status->value;
+            $isValidStatus = true;
+        }
+    } catch (\ValueError $e) {
+        // Invalid enum value - use default
+        \Log::warning('Invalid status badge value', [
+            'status' => $status,
+            'error' => $e->getMessage()
+        ]);
+        $statusValue = 'pending';
+        $isValidStatus = false;
+    }
+
+    // Status configuration with ALL possible statuses
     $statusConfig = [
+        // Basic statuses
         'submitted' => [
             'color' => 'bg-blue-100 text-blue-800 border-blue-200',
-            'icon' => '📝',
+            'icon' => '📄',
             'label' => 'Baru Diajukan'
         ],
         'pending' => [
@@ -29,6 +66,124 @@
             'icon' => '⚙️',
             'label' => 'Sedang Diproses'
         ],
+
+        // Verification statuses (3-level)
+        'verification_step_1_requested' => [
+            'color' => 'bg-blue-100 text-blue-800 border-blue-200',
+            'icon' => '📋',
+            'label' => 'Verifikasi L1'
+        ],
+        'verification_step_1_approved' => [
+            'color' => 'bg-emerald-100 text-emerald-800 border-emerald-200',
+            'icon' => '✅',
+            'label' => 'L1 Approved'
+        ],
+        'verification_step_2_requested' => [
+            'color' => 'bg-green-100 text-green-800 border-green-200',
+            'icon' => '📋',
+            'label' => 'Verifikasi L2'
+        ],
+        'verification_step_2_approved' => [
+            'color' => 'bg-teal-100 text-teal-800 border-teal-200',
+            'icon' => '✅',
+            'label' => 'L2 Approved'
+        ],
+        'verification_step_3_requested' => [
+            'color' => 'bg-purple-100 text-purple-800 border-purple-200',
+            'icon' => '📋',
+            'label' => 'Verifikasi L3 (Final)'
+        ],
+        'verification_step_3_approved' => [
+            'color' => 'bg-violet-100 text-violet-800 border-violet-200',
+            'icon' => '🎉',
+            'label' => 'All Verified'
+        ],
+        'verification_rejected' => [
+            'color' => 'bg-rose-100 text-rose-800 border-rose-200',
+            'icon' => '❌',
+            'label' => 'Verifikasi Ditolak'
+        ],
+
+        // Legacy verification statuses
+        'verification_requested' => [
+            'color' => 'bg-blue-100 text-blue-800 border-blue-200',
+            'icon' => '📝',
+            'label' => 'Menunggu Verifikasi'
+        ],
+        'verification_approved' => [
+            'color' => 'bg-green-100 text-green-800 border-green-200',
+            'icon' => '✅',
+            'label' => 'Terverifikasi'
+        ],
+
+        // Signature statuses (3-level)
+        'signature_requested' => [
+            'color' => 'bg-orange-100 text-orange-800 border-orange-200',
+            'icon' => '✏️',
+            'label' => 'Request TTD L1'
+        ],
+        'signature_uploaded' => [
+            'color' => 'bg-cyan-100 text-cyan-800 border-cyan-200',
+            'icon' => '📤',
+            'label' => 'TTD Diupload'
+        ],
+        'signature_level_1_requested' => [
+            'color' => 'bg-blue-100 text-blue-800 border-blue-200',
+            'icon' => '✏️',
+            'label' => 'TTD L1 Pending'
+        ],
+        'signature_level_1_uploaded' => [
+            'color' => 'bg-emerald-100 text-emerald-800 border-emerald-200',
+            'icon' => '✅',
+            'label' => 'TTD L1 Selesai'
+        ],
+        'signature_level_2_requested' => [
+            'color' => 'bg-indigo-100 text-indigo-800 border-indigo-200',
+            'icon' => '✏️',
+            'label' => 'TTD L2 Pending'
+        ],
+        'signature_level_2_uploaded' => [
+            'color' => 'bg-teal-100 text-teal-800 border-teal-200',
+            'icon' => '✅',
+            'label' => 'TTD L2 Selesai'
+        ],
+        'signature_level_3_requested' => [
+            'color' => 'bg-purple-100 text-purple-800 border-purple-200',
+            'icon' => '✏️',
+            'label' => 'TTD L3 Pending'
+        ],
+        'signature_level_3_uploaded' => [
+            'color' => 'bg-violet-100 text-violet-800 border-violet-200',
+            'icon' => '🎉',
+            'label' => 'Semua TTD Selesai'
+        ],
+        'signature_verified' => [
+            'color' => 'bg-emerald-100 text-emerald-800 border-emerald-200',
+            'icon' => '✅',
+            'label' => 'TTD Terverifikasi'
+        ],
+        'signature_completed' => [
+            'color' => 'bg-cyan-100 text-cyan-800 border-cyan-200',
+            'icon' => '✅',
+            'label' => 'TTD Selesai'
+        ],
+        'all_signatures_verified' => [
+            'color' => 'bg-green-100 text-green-800 border-green-200',
+            'icon' => '🎉',
+            'label' => 'All TTD Verified'
+        ],
+        'waiting_signature' => [
+            'color' => 'bg-purple-100 text-purple-800 border-purple-200',
+            'icon' => '⏳',
+            'label' => 'Menunggu TTD'
+        ],
+        'signature_in_progress' => [
+            'color' => 'bg-violet-100 text-violet-800 border-violet-200',
+            'icon' => '✏️',
+            'label' => 'Proses TTD'
+        ],
+
+        // Final statuses
         'ready_for_pickup' => [
             'color' => 'bg-purple-100 text-purple-800 border-purple-200',
             'icon' => '📦',
@@ -47,39 +202,7 @@
         'ready' => [
             'color' => 'bg-purple-100 text-purple-800 border-purple-200',
             'icon' => '📦',
-            'label' => 'Siap Diambil'
-        ],
-
-        'verification_requested' => [
-            'color' => 'bg-blue-100 text-blue-800 border-blue-200',
-            'icon' => '🔍',
-            'label' => 'Menunggu Verifikasi'
-        ],
-        'verification_approved' => [
-            'color' => 'bg-green-100 text-green-800 border-green-200',
-            'icon' => '✅',
-            'label' => 'Terverifikasi'
-        ],
-        'verification_rejected' => [
-            'color' => 'bg-red-100 text-red-800 border-red-200',
-            'icon' => '❌',
-            'label' => 'Verifikasi Ditolak'
-        ],
-
-        'signature_requested' => [
-            'color' => 'bg-orange-100 text-orange-800 border-orange-200',
-            'icon' => '✍️',
-            'label' => 'Menunggu TTD'
-        ],
-        'signature_uploaded' => [
-            'color' => 'bg-cyan-100 text-cyan-800 border-cyan-200',
-            'icon' => '📝',
-            'label' => 'TTD Diupload'
-        ],
-        'signature_verified' => [
-            'color' => 'bg-emerald-100 text-emerald-800 border-emerald-200',
-            'icon' => '✅',
-            'label' => 'TTD Terverifikasi'
+            'label' => 'Siap'
         ],
     ];
 
@@ -90,7 +213,12 @@
         'lg' => 'px-4 py-2 text-base',
     ];
 
-    $config = $statusConfig[$statusValue] ?? $statusConfig['pending'];
+    $config = $statusConfig[$statusValue] ?? [
+        'color' => 'bg-gray-100 text-gray-600 border-gray-300',
+        'icon' => '⚠️',
+        'label' => $isValidStatus ? 'Status Unknown' : 'Status Invalid'
+    ];
+
     $sizeClass = $sizeClasses[$size] ?? $sizeClasses['md'];
 @endphp
 

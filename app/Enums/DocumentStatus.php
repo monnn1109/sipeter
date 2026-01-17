@@ -39,7 +39,7 @@ enum DocumentStatus: string
     case SIGNATURE_VERIFIED = 'signature_verified';             // Admin verified all TTD
     case SIGNATURE_COMPLETED = 'signature_completed';           // PDF final embedded
 
-    // Legacy (keep for backward compatibility)
+    case ALL_SIGNATURES_VERIFIED = 'all_signatures_verified';
     case WAITING_SIGNATURE = 'waiting_signature';
     case SIGNATURE_IN_PROGRESS = 'signature_in_progress';
 
@@ -281,21 +281,18 @@ enum DocumentStatus: string
 
             self::APPROVED => [self::VERIFICATION_STEP_1_REQUESTED, self::REJECTED],
 
-            // Verification Level 1
             self::VERIFICATION_STEP_1_REQUESTED => [
                 self::VERIFICATION_STEP_1_APPROVED,
                 self::VERIFICATION_REJECTED
             ],
             self::VERIFICATION_STEP_1_APPROVED => [self::VERIFICATION_STEP_2_REQUESTED],
 
-            // Verification Level 2
             self::VERIFICATION_STEP_2_REQUESTED => [
                 self::VERIFICATION_STEP_2_APPROVED,
                 self::VERIFICATION_REJECTED
             ],
             self::VERIFICATION_STEP_2_APPROVED => [self::VERIFICATION_STEP_3_REQUESTED],
 
-            // Verification Level 3 (Final)
             self::VERIFICATION_STEP_3_REQUESTED => [
                 self::VERIFICATION_STEP_3_APPROVED,
                 self::VERIFICATION_REJECTED
@@ -306,7 +303,6 @@ enum DocumentStatus: string
 
             self::PROCESSING => [self::READY_FOR_PICKUP],
 
-            // 🔥 NEW: 3-Level Signature Flow
             self::SIGNATURE_REQUESTED => [self::SIGNATURE_LEVEL_1_REQUESTED],
             self::SIGNATURE_LEVEL_1_REQUESTED => [self::SIGNATURE_LEVEL_1_UPLOADED],
             self::SIGNATURE_LEVEL_1_UPLOADED => [self::SIGNATURE_LEVEL_2_REQUESTED],
@@ -349,7 +345,6 @@ enum DocumentStatus: string
             self::REJECTED => 'Permohonan Anda ditolak. Silakan periksa alasan penolakan.',
             self::PROCESSING => 'Dokumen Anda sedang dalam proses pembuatan.',
 
-            // 🔥 NEW: 3-Level Signature Descriptions
             self::SIGNATURE_REQUESTED => 'Request tanda tangan digital telah dikirim ke Ketua Akademik.',
             self::SIGNATURE_UPLOADED => 'Tanda tangan sedang dalam proses upload.',
             self::SIGNATURE_LEVEL_1_REQUESTED => 'Menunggu upload TTD dari Ketua Akademik (Level 1/3).',
@@ -391,7 +386,6 @@ enum DocumentStatus: string
             self::REJECTED => 0,
             self::PROCESSING => 80,
 
-            // 🔥 NEW: 3-Level Signature Progress
             self::SIGNATURE_REQUESTED => 76,
             self::SIGNATURE_UPLOADED => 77,
             self::SIGNATURE_LEVEL_1_REQUESTED => 78,
@@ -412,9 +406,6 @@ enum DocumentStatus: string
         };
     }
 
-    /**
-     * Get verification level from status
-     */
     public function getVerificationLevel(): ?int
     {
         return match($this) {
@@ -431,9 +422,6 @@ enum DocumentStatus: string
         };
     }
 
-    /**
-     * 🔥 NEW: Get signature level from status
-     */
     public function getSignatureLevel(): ?int
     {
         return match($this) {
@@ -450,17 +438,11 @@ enum DocumentStatus: string
         };
     }
 
-    /**
-     * Check if all verifications completed
-     */
     public function isAllVerificationsCompleted(): bool
     {
         return $this === self::VERIFICATION_STEP_3_APPROVED;
     }
 
-    /**
-     * 🔥 NEW: Check if all signatures uploaded
-     */
     public function isAllSignaturesUploaded(): bool
     {
         return $this === self::SIGNATURE_LEVEL_3_UPLOADED;

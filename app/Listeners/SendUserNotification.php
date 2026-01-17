@@ -31,27 +31,34 @@ class SendUserNotification
         if ($event instanceof DocumentReadyForPickup) {
             $this->notificationService->notifyUserDocumentReady($event->documentRequest);
         }
+
         if ($event instanceof DocumentVerificationRequested) {
+            $currentLevel = $event->documentRequest->current_verification_step ?? 1;
+
             \Log::info('User notification: Verification requested', [
                 'document_code' => $event->documentRequest->request_code,
-                'level' => $event->verification->verification_level,
+                'level' => $currentLevel,
                 'has_user' => $event->documentRequest->user_id ? 'yes' : 'no',
             ]);
         }
 
         if ($event instanceof DocumentVerificationApproved) {
+            $level = $event->authority->getVerificationLevel();
+
             \Log::info('User notification: Verification approved', [
                 'document_code' => $event->documentRequest->request_code,
-                'level' => $event->verification->verification_level,
-                'progress' => $this->getProgressPercentage($event->verification->verification_level),
+                'level' => $level,
+                'progress' => $this->getProgressPercentage($level),
                 'has_user' => $event->documentRequest->user_id ? 'yes' : 'no',
             ]);
         }
 
         if ($event instanceof DocumentVerificationRejected) {
+            $level = $event->verification->verification_level;
+
             \Log::info('User notification: Verification rejected', [
                 'document_code' => $event->documentRequest->request_code,
-                'level' => $event->verification->verification_level,
+                'level' => $level,
                 'has_user' => $event->documentRequest->user_id ? 'yes' : 'no',
             ]);
         }
@@ -61,6 +68,7 @@ class SendUserNotification
     {
         $this->handle($event);
     }
+
     private function getProgressPercentage(int $level): string
     {
         $progressMap = [1 => '33%', 2 => '66%', 3 => '100%'];

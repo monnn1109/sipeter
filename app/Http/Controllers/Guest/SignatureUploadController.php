@@ -118,7 +118,6 @@ class SignatureUploadController extends Controller
                 return back()->withErrors(['signature_file' => 'File tidak valid.'])->withInput();
             }
 
-            // Save file
             $filename = 'signature_' . $documentRequest->request_code . '_L' . $currentLevel . '_' . time() . '.' . $signatureFile->getClientOriginalExtension();
             $path = $signatureFile->storeAs('signatures/level_' . $currentLevel, $filename, 'public');
 
@@ -130,7 +129,6 @@ class SignatureUploadController extends Controller
 
             Log::info('✅ File stored successfully', ['path' => $path, 'filename' => $filename]);
 
-            // Update signature to UPLOADED status
             $signature->update([
                 'signature_file' => $path,
                 'qr_code_file' => null,
@@ -141,7 +139,6 @@ class SignatureUploadController extends Controller
 
             Log::info('✅ Signature updated', ['signature_id' => $signature->id]);
 
-            // Update document status to SIGNATURE_UPLOADED
             $documentRequest->update([
                 'status' => DocumentStatus::SIGNATURE_UPLOADED,
                 'current_signature_step' => $currentLevel,
@@ -149,29 +146,24 @@ class SignatureUploadController extends Controller
 
             Log::info('✅ Document request updated', ['document_id' => $documentRequest->id]);
 
-            // Fire event for notification
             event(new SignatureUploaded($documentRequest, $signature, $authority));
 
             Log::info('✅ Event fired: SignatureUploaded');
 
-            // ✅ AUTO-TRIGGER TO NEXT LEVEL (AFTER UPLOAD)
             if ($currentLevel < 3) {
                 $nextLevel = $currentLevel + 1;
 
-                // Check if next level already exists
                 $existingNextLevel = DocumentSignature::where('document_request_id', $documentRequest->id)
                     ->where('signature_level', $nextLevel)
                     ->first();
 
                 if (!$existingNextLevel) {
-                    // Get authority for next level
                     $nextAuthority = SignatureAuthority::getActiveByLevel($nextLevel);
 
                     if ($nextAuthority) {
                         $nextToken = Str::random(64);
                         $nextTokenExpiry = now()->addDays(7);
 
-                        // Create signature request for next level
                         $nextSignature = DocumentSignature::create([
                             'document_request_id' => $documentRequest->id,
                             'signature_authority_id' => $nextAuthority->id,
@@ -187,7 +179,6 @@ class SignatureUploadController extends Controller
 
                         $nextUploadLink = route('signature.upload.show', $nextToken);
 
-                        // Fire event for next level
                         event(new SignatureRequested($nextSignature, $documentRequest, $nextAuthority, $nextUploadLink));
 
                         Log::info('✅ Auto-triggered next signature level', [
@@ -210,7 +201,6 @@ class SignatureUploadController extends Controller
                     ]);
                 }
             } else {
-                // Level 3 complete - all signatures uploaded
                 Log::info('🎉 All signature levels uploaded', [
                     'document_id' => $documentRequest->id,
                     'document_code' => $documentRequest->request_code,

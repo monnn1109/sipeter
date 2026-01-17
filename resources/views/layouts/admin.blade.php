@@ -67,7 +67,7 @@
                 </a>
 
                 <a href="{{ route('admin.signatures.index') }}"
-                   class="flex items-center gap-3 px-4 py-3 rounded-xl {{ request()->routeIs('admin.signatures.*') ? 'bg-white text-indigo-900 font-bold shadow-lg' : 'hover:bg-indigo-800' }} transition-all">
+                   class="flex items-center gap-3 px-4 py-3 rounded-xl {{ request()->routeIs('admin.signatures.index') || request()->routeIs('admin.signatures.pending') || request()->routeIs('admin.signatures.verify.*') ? 'bg-white text-indigo-900 font-bold shadow-lg' : 'hover:bg-indigo-800' }} transition-all">
                     <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                         <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/>
                     </svg>
@@ -76,13 +76,26 @@
 
                 <div class="border-t border-indigo-800 my-2"></div>
 
-                <a href="{{ route('admin.signatures.history') }}"
-                   class="flex items-center gap-3 px-4 py-3 rounded-xl {{ request()->routeIs('admin.documents.history') ? 'bg-white text-indigo-900 font-bold shadow-lg' : 'hover:bg-indigo-800' }} transition-all">
+                <!-- ✅ FIXED: Riwayat Dokumen - route ke admin.history.index -->
+                <a href="{{ route('admin.history.index') }}"
+                   class="flex items-center gap-3 px-4 py-3 rounded-xl {{ request()->routeIs('admin.history.*') ? 'bg-white text-indigo-900 font-bold shadow-lg' : 'hover:bg-indigo-800' }} transition-all">
                     <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/>
+                        <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/>
                     </svg>
                     <span>Riwayat Dokumen</span>
                 </a>
+
+                <!-- ✅ NEW: Riwayat Tanda Tangan - menu terpisah -->
+                <a href="{{ route('admin.signatures.history') }}"
+                   class="flex items-center gap-3 px-4 py-3 rounded-xl {{ request()->routeIs('admin.signatures.history') ? 'bg-white text-indigo-900 font-bold shadow-lg' : 'hover:bg-indigo-800' }} transition-all">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
+                        <path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm9.707 5.707a1 1 0 00-1.414-1.414L9 12.586l-1.293-1.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                    </svg>
+                    <span>Riwayat Tanda Tangan</span>
+                </a>
+
+                <div class="border-t border-indigo-800 my-2"></div>
 
                 <a href="{{ route('admin.users.index') }}"
                    class="flex items-center gap-3 px-4 py-3 rounded-xl {{ request()->routeIs('admin.users.*') ? 'bg-white text-indigo-900 font-bold shadow-lg' : 'hover:bg-indigo-800' }} transition-all">
