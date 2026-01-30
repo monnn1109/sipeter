@@ -13,11 +13,10 @@
 
     {{-- Stats Cards --}}
     <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-        {{-- Total --}}
         <div class="bg-white rounded-lg shadow p-6">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-sm text-gray-600">Total Verifikasi</p>
+                    <p class="text-sm text-gray-600">Total Dokumen</p>
                     <h3 class="text-2xl font-bold text-gray-800 mt-1">{{ $stats['total'] }}</h3>
                 </div>
                 <div class="p-3 bg-blue-100 rounded-full">
@@ -28,7 +27,6 @@
             </div>
         </div>
 
-        {{-- Pending --}}
         <div class="bg-white rounded-lg shadow p-6">
             <div class="flex items-center justify-between">
                 <div>
@@ -46,7 +44,6 @@
             </a>
         </div>
 
-        {{-- Approved --}}
         <div class="bg-white rounded-lg shadow p-6">
             <div class="flex items-center justify-between">
                 <div>
@@ -64,7 +61,6 @@
             </a>
         </div>
 
-        {{-- Rejected --}}
         <div class="bg-white rounded-lg shadow p-6">
             <div class="flex items-center justify-between">
                 <div>
@@ -83,7 +79,7 @@
         </div>
     </div>
 
-    {{-- ✅ NEW: Level Tabs --}}
+    {{-- Level Tabs & Filter --}}
     <div class="bg-white rounded-lg shadow mb-6">
         <div class="border-b border-gray-200">
             <nav class="flex -mb-px">
@@ -93,20 +89,19 @@
                 </a>
                 <a href="{{ route('admin.verifications.index', ['level' => '1']) }}"
                    class="px-6 py-3 border-b-2 font-medium text-sm {{ request('level') === '1' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }}">
-                    📘 Level 1 (Ketua Akademik)
+                    📘 Level 1
                 </a>
                 <a href="{{ route('admin.verifications.index', ['level' => '2']) }}"
                    class="px-6 py-3 border-b-2 font-medium text-sm {{ request('level') === '2' ? 'border-purple-500 text-purple-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }}">
-                    📕 Level 2 (Wakil Ketua 3)
+                    📕 Level 2
                 </a>
                 <a href="{{ route('admin.verifications.index', ['level' => '3']) }}"
                    class="px-6 py-3 border-b-2 font-medium text-sm {{ request('level') === '3' ? 'border-green-500 text-green-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }}">
-                    📗 Level 3 (Direktur)
+                    📗 Level 3
                 </a>
             </nav>
         </div>
 
-        {{-- Filter Status --}}
         <div class="p-4 border-b border-gray-200">
             <form method="GET" class="flex items-center gap-4">
                 @if(request('level'))
@@ -128,80 +123,112 @@
         <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
                 <tr>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Level</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Kode Dokumen</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pemohon</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Jenis Dokumen</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Verifikator</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status Verifikasi 3-Level</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tanggal</th>
                     <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Aksi</th>
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
-                @forelse($verifications as $verification)
+                @forelse($verifications->groupBy('document_request_id') as $documentId => $docVerifications)
+                    @php
+                        $firstVerification = $docVerifications->first();
+                        $document = $firstVerification->documentRequest;
+
+                        // Get all 3 levels
+                        $level1 = $docVerifications->firstWhere('verification_level', 1);
+                        $level2 = $docVerifications->firstWhere('verification_level', 2);
+                        $level3 = $docVerifications->firstWhere('verification_level', 3);
+
+                        // Determine latest date
+                        $latestDate = $docVerifications->max('verified_at') ?? $docVerifications->max('sent_at') ?? $docVerifications->max('created_at');
+                    @endphp
                 <tr class="hover:bg-gray-50">
-                    {{-- ✅ NEW: Level Badge --}}
-                    <td class="px-6 py-4">
-                        @php
-                            $level = $verification->verification_level ?? 1;
-                            $levelColors = [
-                                1 => 'bg-blue-100 text-blue-800',
-                                2 => 'bg-purple-100 text-purple-800',
-                                3 => 'bg-green-100 text-green-800',
-                            ];
-                            $levelLabels = [
-                                1 => 'L1',
-                                2 => 'L2',
-                                3 => 'L3',
-                            ];
-                        @endphp
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold {{ $levelColors[$level] ?? 'bg-gray-100 text-gray-800' }}">
-                            {{ $levelLabels[$level] ?? 'L?' }}
-                        </span>
-                    </td>
                     <td class="px-6 py-4">
                         <span class="font-mono text-sm font-medium text-gray-900">
-                            {{ $verification->documentRequest->request_code }}
+                            {{ $document->request_code }}
                         </span>
                     </td>
                     <td class="px-6 py-4">
                         <div class="text-sm">
-                            <p class="font-medium text-gray-900">{{ $verification->documentRequest->applicant_name }}</p>
-                            <p class="text-gray-500">{{ $verification->documentRequest->applicant_identifier }}</p>
+                            <p class="font-medium text-gray-900">{{ $document->applicant_name }}</p>
+                            <p class="text-gray-500">{{ $document->applicant_identifier }}</p>
                         </div>
                     </td>
                     <td class="px-6 py-4 text-sm text-gray-900">
-                        {{ $verification->documentRequest->documentType->name }}
-                    </td>
-                    <td class="px-6 py-4 text-sm">
-                        <div>
-                            <p class="font-medium text-gray-900">{{ $verification->authority->name ?? '-' }}</p>
-                            @if($verification->authority)
-                                <p class="text-xs text-gray-500">{{ $verification->authority->authority_type->label() }}</p>
-                            @endif
-                        </div>
+                        {{ $document->documentType->name }}
                     </td>
                     <td class="px-6 py-4">
-                        @if($verification->status === 'requested')
-                            <span class="px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800">
-                                ⏳ Menunggu
-                            </span>
-                        @elseif($verification->status === 'approved')
-                            <span class="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
-                                ✅ Disetujui
-                            </span>
-                        @elseif($verification->status === 'rejected')
-                            <span class="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">
-                                ❌ Ditolak
-                            </span>
-                        @endif
+                        <div class="space-y-1.5">
+                            {{-- Level 1 --}}
+                            <div class="flex items-center gap-2">
+                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-blue-100 text-blue-800">
+                                    L1
+                                </span>
+                                @if($level1)
+                                    @if($level1->status === 'approved')
+                                        <span class="text-xs text-green-600 font-medium">✓</span>
+                                    @elseif($level1->status === 'rejected')
+                                        <span class="text-xs text-red-600 font-medium">✗</span>
+                                    @else
+                                        <span class="text-xs text-yellow-600 font-medium">⏳</span>
+                                    @endif
+                                    <span class="text-xs text-gray-600">{{ $level1->authority->name ?? '-' }}</span>
+                                @else
+                                    <span class="text-xs text-gray-400">-</span>
+                                @endif
+                            </div>
+
+                            {{-- Level 2 --}}
+                            <div class="flex items-center gap-2">
+                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-purple-100 text-purple-800">
+                                    L2
+                                </span>
+                                @if($level2)
+                                    @if($level2->status === 'approved')
+                                        <span class="text-xs text-green-600 font-medium">✓</span>
+                                    @elseif($level2->status === 'rejected')
+                                        <span class="text-xs text-red-600 font-medium">✗</span>
+                                    @else
+                                        <span class="text-xs text-yellow-600 font-medium">⏳</span>
+                                    @endif
+                                    <span class="text-xs text-gray-600">{{ $level2->authority->name ?? '-' }}</span>
+                                @else
+                                    <span class="text-xs text-gray-400">-</span>
+                                @endif
+                            </div>
+
+                            {{-- Level 3 --}}
+                            <div class="flex items-center gap-2">
+                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-green-100 text-green-800">
+                                    L3
+                                </span>
+                                @if($level3)
+                                    @if($level3->status === 'approved')
+                                        <span class="text-xs text-green-600 font-medium">✓</span>
+                                    @elseif($level3->status === 'rejected')
+                                        <span class="text-xs text-red-600 font-medium">✗</span>
+                                    @else
+                                        <span class="text-xs text-yellow-600 font-medium">⏳</span>
+                                    @endif
+                                    <span class="text-xs text-gray-600">{{ $level3->authority->name ?? '-' }}</span>
+                                @else
+                                    <span class="text-xs text-gray-400">-</span>
+                                @endif
+                            </div>
+                        </div>
                     </td>
                     <td class="px-6 py-4 text-sm text-gray-500">
-                        {{ $verification->requested_at?->format('d M Y H:i') ?? '-' }}
+                        @if($latestDate)
+                            {{ $latestDate->format('d M Y H:i') }}
+                        @else
+                            -
+                        @endif
                     </td>
                     <td class="px-6 py-4 text-center">
-                        <a href="{{ route('admin.documents.show', $verification->document_request_id) }}"
+                        <a href="{{ route('admin.documents.show', $document->id) }}"
                            class="text-blue-600 hover:text-blue-800 font-medium text-sm">
                             Detail
                         </a>
@@ -209,7 +236,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="8" class="px-6 py-12 text-center text-gray-500">
+                    <td colspan="6" class="px-6 py-12 text-center text-gray-500">
                         <svg class="w-12 h-12 mx-auto text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                         </svg>
@@ -223,7 +250,6 @@
             </tbody>
         </table>
 
-        {{-- Pagination --}}
         @if($verifications->hasPages())
         <div class="px-6 py-4 border-t border-gray-200">
             {{ $verifications->appends(request()->query())->links() }}
@@ -238,14 +264,14 @@
                 <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
             </svg>
             <div class="text-sm text-blue-800">
-                <p class="font-medium mb-1">ℹ️ Sistem Verifikasi 3-Level:</p>
+                <p class="font-medium mb-1">ℹ️ Sistem Verifikasi 3-Level Sequential:</p>
                 <ul class="space-y-1 list-disc list-inside">
-                    <li><strong>Level 1:</strong> Ketua Akademik (33% progress)</li>
-                    <li><strong>Level 2:</strong> Wakil Ketua 3 - Kemahasiswaan (66% progress)</li>
-                    <li><strong>Level 3:</strong> Direktur - Final Approval (100% progress)</li>
+                    <li><strong>Level 1 (L1):</strong> Ketua Akademik verifikasi pertama</li>
+                    <li><strong>Level 2 (L2):</strong> Wakil Ketua 3 - Kemahasiswaan verifikasi kedua</li>
+                    <li><strong>Level 3 (L3):</strong> Direktur - Final Approval</li>
                     <li>Setiap level memiliki link verifikasi terpisah (berlaku 3 hari)</li>
-                    <li>Sistem otomatis lanjut ke level berikutnya jika approved</li>
-                    <li>Jika ditolak di level manapun, proses BERHENTI</li>
+                    <li>Sistem otomatis lanjut ke level berikutnya jika approved (✓)</li>
+                    <li>Jika ditolak (✗) di level manapun, proses BERHENTI</li>
                 </ul>
             </div>
         </div>

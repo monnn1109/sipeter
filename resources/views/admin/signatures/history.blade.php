@@ -6,14 +6,14 @@
 <div class="container mx-auto px-4 py-8">
     <div class="mb-8">
         <h1 class="text-3xl font-bold text-gray-900">📚 Riwayat Tanda Tangan</h1>
-        <p class="text-gray-600 mt-2">Semua riwayat tanda tangan yang telah diproses</p>
+        <p class="text-gray-600 mt-2">Semua riwayat tanda tangan yang telah diproses (3-Level Sequential)</p>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <div class="bg-white rounded-lg shadow p-6">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-sm text-gray-600 mb-1">Total Riwayat</p>
+                    <p class="text-sm text-gray-600 mb-1">Total Dokumen</p>
                     <p class="text-3xl font-bold text-blue-600">{{ $totalCount }}</p>
                 </div>
                 <div class="bg-blue-100 p-3 rounded-lg">
@@ -131,102 +131,219 @@
         @if($signatures->count() > 0)
             <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50">
+                    <thead class="bg-gradient-to-r from-gray-50 to-gray-100">
                         <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-48">
                                 Dokumen
                             </th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-40">
                                 Pemohon
                             </th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Pejabat TTD
+                            <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                                Status TTD 3-Level
                             </th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Status
+                            <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-36">
+                                Tanggal Selesai
                             </th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Tanggal
+                            <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-40">
+                                Waktu Proses
                             </th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Diverifikasi Oleh
-                            </th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th class="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider w-32">
                                 Aksi
                             </th>
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
-                        @foreach($signatures as $signature)
-                            <tr class="hover:bg-gray-50">
-                                <td class="px-6 py-4">
-                                    <div>
-                                        <p class="text-sm font-mono font-medium text-gray-900">
-                                            {{ $signature->documentRequest->document_code }}
+                        @php
+                            // Group by document to show 1 row per document
+                            $groupedSignatures = $signatures->groupBy('document_request_id');
+                        @endphp
+
+                        @foreach($groupedSignatures as $documentId => $docSignatures)
+                            @php
+                                $firstSig = $docSignatures->first();
+                                $document = $firstSig->documentRequest;
+
+                                // Get all 3 levels
+                                $sigLevel1 = $docSignatures->firstWhere('signature_level', 1);
+                                $sigLevel2 = $docSignatures->firstWhere('signature_level', 2);
+                                $sigLevel3 = $docSignatures->firstWhere('signature_level', 3);
+
+                                // Calculate process time
+                                $allSigs = $docSignatures->sortBy('requested_at');
+                                $firstRequest = $allSigs->first()->requested_at;
+                                $lastVerified = $allSigs->sortByDesc('verified_at')->first()->verified_at;
+
+                                if ($firstRequest && $lastVerified) {
+                                    $totalSeconds = $firstRequest->diffInSeconds($lastVerified);
+                                    $totalMinutes = $firstRequest->diffInMinutes($lastVerified);
+                                    $totalHours = $firstRequest->diffInHours($lastVerified);
+                                    $totalDays = $firstRequest->diffInDays($lastVerified);
+
+                                    if ($totalHours < 2) {
+                                        $speedColor = 'bg-green-100 text-green-800';
+                                        $speedIcon = '⚡';
+                                    } elseif ($totalHours < 24) {
+                                        $speedColor = 'bg-blue-100 text-blue-800';
+                                        $speedIcon = '✓';
+                                    } elseif ($totalDays <= 3) {
+                                        $speedColor = 'bg-yellow-100 text-yellow-800';
+                                        $speedIcon = '○';
+                                    } else {
+                                        $speedColor = 'bg-orange-100 text-orange-800';
+                                        $speedIcon = '⊗';
+                                    }
+                                }
+                            @endphp
+
+                            <tr class="hover:bg-gray-50 transition-colors">
+                                {{-- Document Info --}}
+                                <td class="px-4 py-4 align-top">
+                                    <div class="space-y-1">
+                                        <p class="text-sm font-mono font-bold text-gray-900">
+                                            {{ $document->document_code }}
                                         </p>
-                                        <p class="text-sm text-gray-500">
-                                            {{ $signature->documentRequest->documentType->name }}
+                                        <p class="text-xs text-gray-600 leading-tight">
+                                            {{ Str::limit($document->documentType->name, 35) }}
                                         </p>
                                     </div>
                                 </td>
-                                <td class="px-6 py-4">
-                                    <div>
-                                        <p class="text-sm font-medium text-gray-900">
-                                            {{ $signature->documentRequest->applicant_name }}
+
+                                {{-- Applicant Info --}}
+                                <td class="px-4 py-4 align-top">
+                                    <div class="space-y-1">
+                                        <p class="text-sm font-semibold text-gray-900 leading-tight">
+                                            {{ Str::limit($document->applicant_name, 22) }}
                                         </p>
-                                        <p class="text-sm text-gray-500">
-                                            @if($signature->documentRequest->applicant_type === 'mahasiswa')
-                                                👨‍🎓 {{ $signature->documentRequest->nim }}
+                                        <p class="text-xs text-gray-600">
+                                            {{ $document->applicant_identifier }}
+                                        </p>
+                                    </div>
+                                </td>
+
+                                {{-- 3-Level Signature Status --}}
+                                <td class="px-4 py-4 align-top">
+                                    <div class="space-y-1.5">
+                                        {{-- Level 1 --}}
+                                        <div class="flex items-center gap-2">
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-blue-100 text-blue-800">
+                                                L1
+                                            </span>
+                                            @if($sigLevel1)
+                                                @if($sigLevel1->status->value === 'verified')
+                                                    <span class="text-xs text-green-600 font-bold">✓</span>
+                                                @elseif($sigLevel1->status->value === 'rejected')
+                                                    <span class="text-xs text-red-600 font-bold">✗</span>
+                                                @else
+                                                    <span class="text-xs text-yellow-600 font-bold">⏳</span>
+                                                @endif
+                                                <span class="text-xs text-gray-700">{{ Str::limit($sigLevel1->signatureAuthority->name ?? '-', 18) }}</span>
                                             @else
-                                                👨‍🏫 Internal
+                                                <span class="text-xs text-gray-400">-</span>
                                             @endif
-                                        </p>
+                                        </div>
+
+                                        {{-- Level 2 --}}
+                                        <div class="flex items-center gap-2">
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-purple-100 text-purple-800">
+                                                L2
+                                            </span>
+                                            @if($sigLevel2)
+                                                @if($sigLevel2->status->value === 'verified')
+                                                    <span class="text-xs text-green-600 font-bold">✓</span>
+                                                @elseif($sigLevel2->status->value === 'rejected')
+                                                    <span class="text-xs text-red-600 font-bold">✗</span>
+                                                @else
+                                                    <span class="text-xs text-yellow-600 font-bold">⏳</span>
+                                                @endif
+                                                <span class="text-xs text-gray-700">{{ Str::limit($sigLevel2->signatureAuthority->name ?? '-', 18) }}</span>
+                                            @else
+                                                <span class="text-xs text-gray-400">-</span>
+                                            @endif
+                                        </div>
+
+                                        {{-- Level 3 --}}
+                                        <div class="flex items-center gap-2">
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-green-100 text-green-800">
+                                                L3
+                                            </span>
+                                            @if($sigLevel3)
+                                                @if($sigLevel3->status->value === 'verified')
+                                                    <span class="text-xs text-green-600 font-bold">✓</span>
+                                                @elseif($sigLevel3->status->value === 'rejected')
+                                                    <span class="text-xs text-red-600 font-bold">✗</span>
+                                                @else
+                                                    <span class="text-xs text-yellow-600 font-bold">⏳</span>
+                                                @endif
+                                                <span class="text-xs text-gray-700">{{ Str::limit($sigLevel3->signatureAuthority->name ?? '-', 18) }}</span>
+                                            @else
+                                                <span class="text-xs text-gray-400">-</span>
+                                            @endif
+                                        </div>
                                     </div>
                                 </td>
-                                <td class="px-6 py-4">
-                                    <div>
-                                        <p class="text-sm font-medium text-gray-900">
-                                            {{ $signature->authority->name }}
-                                        </p>
-                                        <p class="text-sm text-gray-500">
-                                            {{ $signature->authority->position }}
-                                        </p>
-                                    </div>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <x-signature-status-badge :status="$signature->status" />
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="text-sm">
-                                        <p class="text-gray-900">{{ $signature->verified_at->format('d/m/Y') }}</p>
-                                        <p class="text-gray-500">{{ $signature->verified_at->format('H:i') }} WIB</p>
-                                    </div>
-                                </td>
-                                <td class="px-6 py-4">
-                                    @if($signature->verifiedBy)
-                                        <div>
-                                            <p class="text-sm font-medium text-gray-900">
-                                                {{ $signature->verifiedBy->name }}
-                                            </p>
-                                            <p class="text-sm text-gray-500">Admin</p>
+
+                                {{-- Completion Date --}}
+                                <td class="px-4 py-4 align-top">
+                                    @if($lastVerified)
+                                        <div class="space-y-0.5">
+                                            <p class="text-sm text-gray-900 font-semibold">{{ $lastVerified->format('d/m/Y') }}</p>
+                                            <p class="text-xs text-gray-600">{{ $lastVerified->format('H:i') }} WIB</p>
+                                            <p class="text-xs text-blue-600">{{ $lastVerified->diffForHumans() }}</p>
                                         </div>
                                     @else
-                                        <span class="text-sm text-gray-400">-</span>
+                                        <span class="text-gray-400">-</span>
                                     @endif
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm">
-                                    <div class="flex items-center gap-2">
+
+                                {{-- Process Time --}}
+                                <td class="px-4 py-4 align-top">
+                                    @if(isset($speedColor))
+                                        <div class="space-y-1">
+                                            <span class="inline-flex items-center px-2.5 py-1 text-xs font-bold {{ $speedColor }} rounded-full whitespace-nowrap">
+                                                {{ $speedIcon }}
+                                                @if($totalSeconds < 60)
+                                                    {{ round($totalSeconds) }} detik
+                                                @elseif($totalMinutes < 60)
+                                                    {{ round($totalMinutes) }} menit
+                                                @elseif($totalHours < 24)
+                                                    {{ floor($totalHours) }} jam
+                                                @elseif($totalDays < 7)
+                                                    {{ $totalDays }} hari
+                                                @else
+                                                    {{ $totalDays }} hari
+                                                @endif
+                                            </span>
+                                            <p class="text-xs text-gray-500">
+                                                Mulai: {{ $firstRequest->format('d/m H:i') }}
+                                            </p>
+                                        </div>
+                                    @else
+                                        <span class="text-gray-400">-</span>
+                                    @endif
+                                </td>
+
+                                {{-- Actions --}}
+                                <td class="px-4 py-4 align-top text-center">
+                                    <div class="flex flex-col gap-2 items-center">
                                         <button
-                                            onclick="viewSignature({{ $signature->id }})"
-                                            class="text-blue-600 hover:text-blue-800 font-medium"
+                                            onclick="viewAllSignatures({{ $documentId }})"
+                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-lg text-xs font-semibold transition-colors w-full justify-center"
                                         >
-                                            👁️ Lihat
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                            </svg>
+                                            Lihat TTD
                                         </button>
                                         <a
-                                            href="{{ route('admin.signatures.history', $signature->document_request_id) }}"
-                                            class="text-gray-600 hover:text-gray-800 font-medium"
+                                            href="{{ route('admin.documents.show', $document->id) }}"
+                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-lg text-xs font-semibold transition-colors w-full justify-center"
                                         >
-                                            📄 Dokumen
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                            </svg>
+                                            Dokumen
                                         </a>
                                     </div>
                                 </td>
@@ -260,91 +377,111 @@
     <div class="mt-6 flex justify-end gap-3">
         <a
             href="{{ route('admin.signatures.history.export', request()->query()) }}"
-            class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium"
+            class="inline-flex items-center gap-2 px-6 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium shadow-sm"
         >
-            📥 Export Excel
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+            Export Excel
         </a>
         <a
             href="{{ route('admin.signatures.history.pdf', request()->query()) }}"
-            class="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium"
+            class="inline-flex items-center gap-2 px-6 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium shadow-sm"
         >
-            📄 Export PDF
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+            </svg>
+            Export PDF
         </a>
     </div>
     @endif
 </div>
 
+{{-- Modal for viewing all 3 signatures --}}
 <div id="signature-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-    <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-2/3 lg:w-1/2 shadow-lg rounded-lg bg-white">
+    <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-2/3 shadow-lg rounded-lg bg-white">
         <div class="mt-3">
             <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-semibold text-gray-900">✍️ Detail Tanda Tangan</h3>
+                <h3 class="text-lg font-semibold text-gray-900">✍️ Detail Tanda Tangan 3-Level</h3>
                 <button onclick="closeSignatureModal()" class="text-gray-400 hover:text-gray-600">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                     </svg>
                 </button>
             </div>
-            <div id="signature-content"></div>
+            <div id="signature-content" class="space-y-4"></div>
         </div>
     </div>
 </div>
 
 <script>
-    function viewSignature(signatureId) {
+    const allSignatures = @json($signatures->items());
+
+    function viewAllSignatures(documentId) {
         const modal = document.getElementById('signature-modal');
         const content = document.getElementById('signature-content');
 
         content.innerHTML = '<div class="text-center py-8"><span class="text-2xl">⏳</span><p class="mt-2">Loading...</p></div>';
         modal.classList.remove('hidden');
 
-        fetch(`/admin/signatures/${signatureId}/view`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    const sig = data.signature;
-                    content.innerHTML = `
-                        <div class="space-y-4">
-                            <!-- Signature Image -->
-                            <div class="border-2 border-gray-300 rounded-lg p-4 bg-gray-50 text-center">
-                                <img src="${sig.signature_url}" alt="Signature" class="max-w-full h-auto max-h-64 mx-auto">
-                            </div>
+        // Get all signatures for this document
+        const docSigs = allSignatures.filter(sig => sig.document_request_id === documentId);
 
-                            <!-- Details -->
-                            <div class="grid grid-cols-2 gap-4 text-sm">
-                                <div>
-                                    <span class="font-medium text-gray-600">Dokumen:</span>
-                                    <p class="text-gray-900 font-mono">${sig.document_code}</p>
-                                </div>
-                                <div>
-                                    <span class="font-medium text-gray-600">Pejabat:</span>
-                                    <p class="text-gray-900">${sig.authority_name}</p>
-                                </div>
-                                <div>
-                                    <span class="font-medium text-gray-600">Upload:</span>
-                                    <p class="text-gray-900">${sig.uploaded_at}</p>
-                                </div>
-                                <div>
-                                    <span class="font-medium text-gray-600">Verifikasi:</span>
-                                    <p class="text-gray-900">${sig.verified_at}</p>
-                                </div>
-                            </div>
+        if (docSigs.length === 0) {
+            content.innerHTML = '<div class="text-center py-8 text-red-600">Tidak ada data</div>';
+            return;
+        }
 
-                            ${sig.rejection_reason ? `
-                                <div class="bg-red-50 border border-red-200 rounded-lg p-3">
-                                    <p class="text-sm font-medium text-red-900">Alasan Penolakan:</p>
-                                    <p class="text-sm text-red-800 mt-1">${sig.rejection_reason}</p>
-                                </div>
-                            ` : ''}
+        const levels = [
+            { level: 1, label: 'Level 1: Ketua Akademik', color: 'blue' },
+            { level: 2, label: 'Level 2: Wakil Ketua 3', color: 'purple' },
+            { level: 3, label: 'Level 3: Direktur', color: 'green' }
+        ];
+
+        let html = '';
+        levels.forEach(levelInfo => {
+            const sig = docSigs.find(s => s.signature_level === levelInfo.level);
+
+            html += `
+                <div class="border border-${levelInfo.color}-200 rounded-lg p-4 bg-${levelInfo.color}-50">
+                    <h4 class="font-semibold text-${levelInfo.color}-900 mb-3">${levelInfo.label}</h4>
+                    ${sig ? `
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="col-span-2 bg-white p-3 rounded border">
+                                <img src="${sig.signature_url || '/placeholder-signature.png'}"
+                                     alt="TTD ${levelInfo.label}"
+                                     class="max-w-full h-auto max-h-32 mx-auto"
+                                     onerror="this.src='/placeholder-signature.png'">
+                            </div>
+                            <div class="text-sm">
+                                <span class="font-medium text-gray-600">Pejabat:</span>
+                                <p class="text-gray-900">${sig.signature_authority?.name || '-'}</p>
+                            </div>
+                            <div class="text-sm">
+                                <span class="font-medium text-gray-600">Status:</span>
+                                <p class="text-gray-900">
+                                    ${sig.status?.value === 'verified' ? '✓ Verified' :
+                                      sig.status?.value === 'rejected' ? '✗ Rejected' :
+                                      '⏳ Pending'}
+                                </p>
+                            </div>
+                            <div class="text-sm">
+                                <span class="font-medium text-gray-600">Upload:</span>
+                                <p class="text-gray-900">${sig.uploaded_at ? new Date(sig.uploaded_at).toLocaleString('id-ID') : '-'}</p>
+                            </div>
+                            <div class="text-sm">
+                                <span class="font-medium text-gray-600">Verifikasi:</span>
+                                <p class="text-gray-900">${sig.verified_at ? new Date(sig.verified_at).toLocaleString('id-ID') : '-'}</p>
+                            </div>
                         </div>
-                    `;
-                } else {
-                    content.innerHTML = '<div class="text-center py-8 text-red-600">Gagal memuat data</div>';
-                }
-            })
-            .catch(error => {
-                content.innerHTML = '<div class="text-center py-8 text-red-600">Terjadi kesalahan</div>';
-            });
+                    ` : `
+                        <p class="text-gray-500 text-sm italic">Belum ada tanda tangan untuk level ini</p>
+                    `}
+                </div>
+            `;
+        });
+
+        content.innerHTML = html;
     }
 
     function closeSignatureModal() {

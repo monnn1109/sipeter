@@ -9,12 +9,8 @@ use Illuminate\Support\Facades\Hash;
 
 class InternalUserSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
-        // Contoh User Dosen
         User::create([
             'name' => 'Budi Dosen',
             'email' => 'dosen@staba.ac.id',
@@ -25,7 +21,6 @@ class InternalUserSeeder extends Seeder
             'is_active' => true,
         ]);
 
-        // Contoh User Staff
         User::create([
             'name' => 'Siti Staff',
             'email' => 'staff@staba.ac.id',

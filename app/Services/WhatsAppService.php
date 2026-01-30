@@ -219,12 +219,6 @@ class WhatsAppService
 
         return $phone;
     }
-
-    // ==================== 🆕 3-LEVEL VERIFICATION METHODS ====================
-
-    /**
-     * ✅ CRITICAL: Method yang dipanggil oleh Listener
-     */
     public function sendVerificationRequestByLevel(
         DocumentRequest $documentRequest,
         SignatureAuthority $authority,
@@ -239,9 +233,6 @@ class WhatsAppService
         };
     }
 
-    /**
-     * ✅ CRITICAL: Method yang dipanggil oleh Listener
-     */
     public function sendVerificationInProgressByLevel(
         DocumentRequest $documentRequest,
         SignatureAuthority $authority,
@@ -273,9 +264,6 @@ class WhatsAppService
         );
     }
 
-    /**
-     * ✅ NEW: Send verification request for Level 1 (Ketua Akademik)
-     */
     public function sendVerificationLevel1Notification(
         DocumentRequest $documentRequest,
         SignatureAuthority $authority,
@@ -312,9 +300,6 @@ class WhatsAppService
         );
     }
 
-    /**
-     * ✅ NEW: Send verification request for Level 2 (Wakil Ketua 3)
-     */
     public function sendVerificationLevel2Notification(
         DocumentRequest $documentRequest,
         SignatureAuthority $authority,
@@ -355,9 +340,6 @@ class WhatsAppService
         );
     }
 
-    /**
-     * ✅ NEW: Send verification request for Level 3 (Direktur - Final)
-     */
     public function sendVerificationLevel3Notification(
         DocumentRequest $documentRequest,
         SignatureAuthority $authority,

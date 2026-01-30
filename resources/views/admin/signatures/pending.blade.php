@@ -171,8 +171,9 @@
                             </td>
                             <td class="px-6 py-4">
                                 <div class="text-sm text-gray-900">{{ $sig->documentRequest->applicant_name }}</div>
+                                {{-- ✅ FIXED: applicant_type enum to string --}}
                                 <div class="text-xs text-gray-500">
-                                    {{ ucfirst($sig->documentRequest->applicant_type) }}
+                                    {{ $sig->documentRequest->applicant_type->label() }}
                                 </div>
                             </td>
                             <td class="px-6 py-4">
@@ -182,10 +183,15 @@
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <x-signature-status-badge :status="$sig->status" />
                             </td>
+                            {{-- ✅ FIXED: uploaded_at dengan null check --}}
                             <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="text-sm text-gray-900">{{ $sig->uploaded_at->format('d/m/Y') }}</div>
-                                <div class="text-xs text-gray-500">{{ $sig->uploaded_at->format('H:i') }} WIB</div>
-                                <div class="text-xs text-blue-600">{{ $sig->uploaded_at->diffForHumans() }}</div>
+                                @if($sig->uploaded_at)
+                                    <div class="text-sm text-gray-900">{{ $sig->uploaded_at->format('d/m/Y') }}</div>
+                                    <div class="text-xs text-gray-500">{{ $sig->uploaded_at->format('H:i') }} WIB</div>
+                                    <div class="text-xs text-blue-600">{{ $sig->uploaded_at->diffForHumans() }}</div>
+                                @else
+                                    <span class="text-gray-400">-</span>
+                                @endif
                             </td>
                             <td class="px-6 py-4 text-center">
                                 <div class="flex items-center justify-center gap-2">

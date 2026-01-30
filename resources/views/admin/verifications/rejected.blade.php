@@ -8,7 +8,7 @@
     <div class="mb-8 flex items-center justify-between">
         <div>
             <h1 class="text-3xl font-bold text-gray-900">❌ Verifikasi Ditolak</h1>
-            <p class="text-gray-600 mt-2">Daftar dokumen yang ditolak saat verifikasi</p>
+            <p class="text-gray-600 mt-2">Daftar dokumen yang ditolak saat verifikasi (3-Level Sequential)</p>
         </div>
         <a href="{{ route('admin.verifications.index') }}"
            class="flex items-center gap-2 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium rounded-lg transition-colors">
@@ -57,107 +57,147 @@
         </div>
     </div>
 
-    {{-- Filter removed karena $authorities tidak ada --}}
-    {{-- Jika butuh filter, tambahkan $authorities di controller --}}
-
     <div class="bg-white rounded-lg shadow-lg overflow-hidden">
         @if($verifications->count() > 0)
             <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50">
+                    <thead class="bg-gradient-to-r from-gray-50 to-gray-100">
                         <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-48">
                                 Dokumen
                             </th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-44">
                                 Pemohon
                             </th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Ditolak Oleh
+                            <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-48">
+                                Ditolak Di Level
                             </th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                                 Alasan Penolakan
                             </th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-36">
                                 Tanggal
                             </th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th class="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider w-32">
                                 Aksi
                             </th>
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
-                        @foreach($verifications as $verification)
-                            <tr class="hover:bg-gray-50">
-                                <td class="px-6 py-4">
-                                    <div>
-                                        <p class="text-sm font-mono font-medium text-gray-900">
-                                            {{ $verification->documentRequest->document_code }}
+                        @php
+                            // Group by document to avoid duplicates
+                            $groupedVerifications = $verifications->groupBy('document_request_id');
+                        @endphp
+
+                        @foreach($groupedVerifications as $documentId => $docVerifications)
+                            @php
+                                // Get the rejected verification (should be only one per document)
+                                $rejectedVerification = $docVerifications->firstWhere('status', 'rejected');
+                                if (!$rejectedVerification) continue;
+
+                                $document = $rejectedVerification->documentRequest;
+                                $level = $rejectedVerification->verification_level ?? 1;
+
+                                $levelConfig = [
+                                    1 => ['color' => 'bg-blue-100 text-blue-800', 'label' => 'Level 1', 'name' => 'Ketua Akademik'],
+                                    2 => ['color' => 'bg-purple-100 text-purple-800', 'label' => 'Level 2', 'name' => 'Wakil Ketua 3'],
+                                    3 => ['color' => 'bg-green-100 text-green-800', 'label' => 'Level 3', 'name' => 'Direktur'],
+                                ];
+                                $config = $levelConfig[$level] ?? $levelConfig[1];
+                            @endphp
+
+                            <tr class="hover:bg-gray-50 transition-colors">
+                                <td class="px-4 py-4 align-top">
+                                    <div class="space-y-1">
+                                        <p class="text-sm font-mono font-bold text-gray-900">
+                                            {{ $document->document_code }}
                                         </p>
-                                        <p class="text-sm text-gray-500">
-                                            {{ $verification->documentRequest->documentType->name }}
-                                        </p>
-                                    </div>
-                                </td>
-                                <td class="px-6 py-4">
-                                    <div>
-                                        <p class="text-sm font-medium text-gray-900">
-                                            {{ $verification->documentRequest->applicant_name }}
-                                        </p>
-                                        <p class="text-sm text-gray-500">
-                                            @if($verification->documentRequest->applicant_type === 'mahasiswa')
-                                                👨‍🎓 {{ $verification->documentRequest->nim }}
-                                            @else
-                                                👨‍🏫 Internal
-                                            @endif
-                                        </p>
-                                    </div>
-                                </td>
-                                <td class="px-6 py-4">
-                                    <div>
-                                        <p class="text-sm font-medium text-gray-900">
-                                            {{ $verification->signatureAuthority->name }}
-                                        </p>
-                                        <p class="text-sm text-gray-500">
-                                            {{ $verification->signatureAuthority->position }}
+                                        <p class="text-xs text-gray-600 leading-tight">
+                                            {{ Str::limit($document->documentType->name, 35) }}
                                         </p>
                                     </div>
                                 </td>
-                                <td class="px-6 py-4">
-                                    <div class="max-w-xs">
-                                        <p class="text-sm text-gray-900 line-clamp-2">
-                                            {{ $verification->rejection_reason ?? '-' }}
+                                <td class="px-4 py-4 align-top">
+                                    <div class="space-y-1">
+                                        <p class="text-sm font-semibold text-gray-900 leading-tight">
+                                            {{ Str::limit($document->applicant_name, 25) }}
                                         </p>
-                                        @if($verification->rejection_reason && strlen($verification->rejection_reason) > 50)
-                                            <button
-                                                onclick="showFullReason({{ $verification->id }})"
-                                                class="text-xs text-blue-600 hover:text-blue-800 mt-1"
-                                            >
-                                                Lihat selengkapnya
-                                            </button>
+                                        <p class="text-xs text-gray-600">
+                                            {{ $document->applicant_identifier }}
+                                        </p>
+                                    </div>
+                                </td>
+                                <td class="px-4 py-4 align-top">
+                                    <div class="space-y-1.5">
+                                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold {{ $config['color'] }} whitespace-nowrap">
+                                            ❌ {{ $config['label'] }}
+                                        </span>
+                                        @if($rejectedVerification->authority)
+                                            <p class="text-xs text-gray-800 font-semibold leading-tight">
+                                                {{ Str::limit($rejectedVerification->authority->name, 28) }}
+                                            </p>
+                                            <p class="text-xs text-gray-500">
+                                                {{ $config['name'] }}
+                                            </p>
                                         @endif
                                     </div>
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="text-sm">
-                                        <p class="text-gray-900">{{ $verification->updated_at->format('d/m/Y') }}</p>
-                                        <p class="text-gray-500">{{ $verification->updated_at->format('H:i') }} WIB</p>
+                                <td class="px-4 py-4 align-top">
+                                    <div class="max-w-md">
+                                        @if($rejectedVerification->notes)
+                                            <div class="bg-red-50 border border-red-200 rounded px-3 py-2">
+                                                <p class="text-xs text-gray-900 leading-relaxed line-clamp-3">
+                                                    {{ $rejectedVerification->notes }}
+                                                </p>
+                                            </div>
+                                            @if(strlen($rejectedVerification->notes) > 120)
+                                                <button
+                                                    onclick="showFullReason({{ $rejectedVerification->id }})"
+                                                    class="text-xs text-blue-600 hover:text-blue-800 font-medium mt-1.5 inline-flex items-center gap-1"
+                                                >
+                                                    Lihat lengkap
+                                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                                    </svg>
+                                                </button>
+                                            @endif
+                                        @else
+                                            <span class="text-xs text-gray-400 italic">Tidak ada alasan</span>
+                                        @endif
                                     </div>
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm">
-                                    <div class="flex items-center gap-2">
-
-                                            href="{{ route('admin.documents.detail', $verification->document_request_id) }}"
-                                            class="text-blue-600 hover:text-blue-800 font-medium"
+                                <td class="px-4 py-4 align-top">
+                                    @if($rejectedVerification->verified_at)
+                                        <div class="space-y-0.5">
+                                            <p class="text-sm text-gray-900 font-semibold">{{ $rejectedVerification->verified_at->format('d/m/Y') }}</p>
+                                            <p class="text-xs text-gray-600">{{ $rejectedVerification->verified_at->format('H:i') }} WIB</p>
+                                            <p class="text-xs text-blue-600">{{ $rejectedVerification->verified_at->diffForHumans() }}</p>
+                                        </div>
+                                    @else
+                                        <span class="text-gray-400">-</span>
+                                    @endif
+                                </td>
+                                <td class="px-4 py-4 align-top text-center">
+                                    <div class="flex flex-col gap-2 items-center">
+                                        <a
+                                            href="{{ route('admin.documents.show', $document->id) }}"
+                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-lg text-xs font-semibold transition-colors"
                                         >
-                                            👁️ Detail
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                            </svg>
+                                            Detail
                                         </a>
                                         <button
-                                            onclick="resendVerification({{ $verification->document_request_id }})"
-                                            class="text-green-600 hover:text-green-800 font-medium"
-                                            title="Kirim Ulang ke Pejabat Lain"
+                                            onclick="resendVerification({{ $document->id }})"
+                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-100 text-green-700 hover:bg-green-200 rounded-lg text-xs font-semibold transition-colors"
+                                            title="Kirim Ulang Verifikasi"
                                         >
-                                            🔄 Kirim Ulang
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                                            </svg>
+                                            Kirim Ulang
                                         </button>
                                     </div>
                                 </td>
@@ -184,6 +224,7 @@
     </div>
 </div>
 
+{{-- Modal for full rejection reason --}}
 <div id="reason-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
     <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-1/2 shadow-lg rounded-lg bg-white">
         <div class="mt-3">
@@ -214,9 +255,13 @@
     const verificationsData = @json($verifications->items());
 
     function showFullReason(verificationId) {
-        const verification = verificationsData.find(v => v.id === verificationId);
-        if (verification) {
-            document.getElementById('full-reason').textContent = verification.rejection_reason;
+        const allVerifications = verificationsData.flatMap(item =>
+            item.document_request_id ? [item] : []
+        );
+        const verification = allVerifications.find(v => v.id === verificationId);
+
+        if (verification && verification.notes) {
+            document.getElementById('full-reason').textContent = verification.notes;
             document.getElementById('reason-modal').classList.remove('hidden');
         }
     }
@@ -226,12 +271,12 @@
     }
 
     function resendVerification(documentId) {
-        if (confirm('Kirim ulang permintaan verifikasi ke pejabat lain?\n\nDokumen yang ditolak dapat diverifikasi ulang oleh pejabat berbeda.')) {
+        if (confirm('Kirim ulang permintaan verifikasi?\n\nDokumen yang ditolak dapat diverifikasi ulang.')) {
             window.location.href = `/admin/documents/${documentId}/send-verification`;
         }
     }
 
-    document.getElementById('reason-modal').addEventListener('click', function(e) {
+    document.getElementById('reason-modal')?.addEventListener('click', function(e) {
         if (e.target === this) {
             closeReasonModal();
         }

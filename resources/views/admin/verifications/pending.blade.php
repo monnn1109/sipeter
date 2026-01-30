@@ -81,7 +81,7 @@
                     <tbody class="divide-y divide-gray-200">
                         @foreach($verifications as $verification)
                         <tr class="hover:bg-gray-50 transition">
-                            {{-- ✅ NEW: Level Badge --}}
+                            {{-- ✅ FIXED: Level Badge --}}
                             <td class="px-6 py-4">
                                 @php
                                     $level = $verification->verification_level ?? 1;
@@ -120,23 +120,36 @@
                                     <p class="text-xs text-gray-500">{{ $verification->authority->authority_type->label() }}</p>
                                 </div>
                             </td>
+
+                            {{-- ✅ FIXED: requested_at dengan null check --}}
                             <td class="px-6 py-4 text-sm text-gray-700">
-                                {{ $verification->requested_at->format('d M Y') }}
-                                <p class="text-xs text-gray-500">{{ $verification->requested_at->format('H:i') }}</p>
-                            </td>
-                            <td class="px-6 py-4 text-sm">
-                                @php
-                                    $hoursLeft = now()->diffInHours($verification->expires_at, false);
-                                @endphp
-                                @if($hoursLeft > 24)
-                                    <span class="text-green-600 font-medium">{{ now()->diffInDays($verification->expires_at) }} hari lagi</span>
-                                @elseif($hoursLeft > 0)
-                                    <span class="text-yellow-600 font-medium">{{ $hoursLeft }} jam lagi</span>
+                                @if($verification->sent_at)
+                                    {{ $verification->sent_at->format('d M Y') }}
+                                    <p class="text-xs text-gray-500">{{ $verification->sent_at->format('H:i') }}</p>
                                 @else
-                                    <span class="text-red-600 font-medium">Expired</span>
+                                    <span class="text-gray-400">-</span>
                                 @endif
-                                <p class="text-xs text-gray-500">{{ $verification->expires_at->format('d M Y H:i') }}</p>
                             </td>
+
+                            {{-- ✅ FIXED: expires_at dengan null check --}}
+                            <td class="px-6 py-4 text-sm">
+                                @if($verification->expires_at)
+                                    @php
+                                        $hoursLeft = now()->diffInHours($verification->expires_at, false);
+                                    @endphp
+                                    @if($hoursLeft > 24)
+                                        <span class="text-green-600 font-medium">{{ now()->diffInDays($verification->expires_at) }} hari lagi</span>
+                                    @elseif($hoursLeft > 0)
+                                        <span class="text-yellow-600 font-medium">{{ $hoursLeft }} jam lagi</span>
+                                    @else
+                                        <span class="text-red-600 font-medium">Expired</span>
+                                    @endif
+                                    <p class="text-xs text-gray-500">{{ $verification->expires_at->format('d M Y H:i') }}</p>
+                                @else
+                                    <span class="text-gray-400">-</span>
+                                @endif
+                            </td>
+
                             <td class="px-6 py-4">
                                 <span class="px-3 py-1 bg-yellow-100 text-yellow-800 text-xs font-semibold rounded-full">
                                     ⏳ Pending
